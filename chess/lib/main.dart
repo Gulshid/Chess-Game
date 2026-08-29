@@ -10,10 +10,6 @@ import 'screens/start_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  // NOTE: chess plays fine in landscape too (unlike Ludo's fixed board
-  // orientation), so this is portrait-only for now to match the reference
-  // pattern — reconsider before Phase 5 if you want a tablet/desktop
-  // landscape board layout, since locking orientation here would fight it.
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
@@ -60,9 +56,7 @@ class ChessApp extends StatelessWidget {
   }
 }
 
-/// Picks a ScreenUtil design size based on the available width, so the
-/// same `.w`/`.h`/`.sp` calls scale sensibly whether the app is running on
-/// a phone, a tablet, or a wide desktop/web window.
+
 Size _getDesignSize(double width) {
   if (width < 600) return const Size(360, 690); // phones
   if (width < 1200) return const Size(834, 1194); // tablets

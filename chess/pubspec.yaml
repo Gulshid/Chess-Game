@@ -35,6 +35,15 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
+  provider: ^6.1.2
+
+  # Responsive design: pick a design size based on device class
+  # (phone/tablet/desktop) and scale every .w/.h/.sp unit against it.
+  flutter_screenutil: ^5.9.3
+
+  # Typography.
+  google_fonts: ^6.2.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

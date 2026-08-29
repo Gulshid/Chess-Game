@@ -7,7 +7,7 @@
 ///
 ///   file = square % 8   (0 = a, ... 7 = h)
 ///   rank = square ~/ 8  (0 = rank 1, ... 7 = rank 8)
-library board_utils;
+library;
 
 int fileOf(int square) => square % 8;
 

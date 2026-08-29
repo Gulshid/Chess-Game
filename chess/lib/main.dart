@@ -1,16 +1,23 @@
-import 'package:chess/core/constant/app_constants.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 
+import 'core/constant/app_constants.dart';
 import 'core/theme/app_theme.dart';
-import 'features/chess_engine/domain/chess_engine.dart';
+import 'providers/game_provider.dart';
+import 'screens/start_screen.dart';
 
-/// Phase 1 entry point.
-///
-/// This does not render a chess board yet — that's Phase 5. Its only job
-/// right now is to prove the project compiles and to sanity-check the
-/// Phase 2 engine by printing the legal move count for the starting
-/// position and the resulting FEN after one move.
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  // NOTE: chess plays fine in landscape too (unlike Ludo's fixed board
+  // orientation), so this is portrait-only for now to match the reference
+  // pattern — reconsider before Phase 5 if you want a tablet/desktop
+  // landscape board layout, since locking orientation here would fight it.
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
   runApp(const ChessApp());
 }
 
@@ -19,41 +26,45 @@ class ChessApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: AppConstants.appName,
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
-      home: const _EngineSmokeTestScreen(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => GameProvider()),
+      ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return ScreenUtilInit(
+            designSize: _getDesignSize(constraints.maxWidth),
+            minTextAdapt: true,
+            splitScreenMode: true,
+            builder: (context, _) {
+              return MaterialApp(
+                title: AppConstants.appName,
+                debugShowCheckedModeBanner: false,
+                theme: AppTheme.dark,
+                themeAnimationDuration: const Duration(milliseconds: 350),
+                themeAnimationCurve: Curves.easeInOut,
+                builder: (context, child) {
+                  return MediaQuery(
+                    data: MediaQuery.of(context)
+                        .copyWith(textScaler: TextScaler.noScaling),
+                    child: child!,
+                  );
+                },
+                home: const StartScreen(),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }
 
-/// Temporary Phase 1/2 screen. Replaced by the real board UI in Phase 5.
-class _EngineSmokeTestScreen extends StatelessWidget {
-  const _EngineSmokeTestScreen();
-
-  @override
-  Widget build(BuildContext context) {
-    final engine = ChessEngine.initial();
-    final legalMoveCount = engine.allLegalMoves.length;
-
-    return Scaffold(
-      appBar: AppBar(title: const Text(AppConstants.appName)),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Engine loaded.\n'
-              'Legal moves for White at start: $legalMoveCount\n'
-              '(expected: 20)',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            Text('FEN: ${engine.fen}'),
-          ],
-        ),
-      ),
-    );
-  }
+/// Picks a ScreenUtil design size based on the available width, so the
+/// same `.w`/`.h`/`.sp` calls scale sensibly whether the app is running on
+/// a phone, a tablet, or a wide desktop/web window.
+Size _getDesignSize(double width) {
+  if (width < 600) return const Size(360, 690); // phones
+  if (width < 1200) return const Size(834, 1194); // tablets
+  return const Size(1440, 1024); // desktop / web
 }

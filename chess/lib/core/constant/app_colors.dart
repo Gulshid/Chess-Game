@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 
-/// Centralized color palette.
+/// Centralized color palette for app chrome (app bar, buttons, scaffold
+/// background, seed color).
 ///
-/// Board-square colors live here too (rather than in a Phase-5-only file)
-/// because `AppTheme` needs `scaffoldBackground` and the seed color right
-/// now for `main.dart`, and it's one less place to look later when the
-/// board UI (Phase 5) picks a default theme.
+/// Board-square colors have moved to
+/// `features/board_ui/domain/board_theme.dart` now that Phase 5 is
+/// underway — `BoardTheme` holds a *list* of selectable board palettes
+/// (classic green, wood, marble, midnight) rather than one fixed pair of
+/// colors. The `board*` constants below are kept as the single default
+/// theme's values for any code that hasn't migrated to `BoardTheme` yet,
+/// and mirror `BoardTheme.classicGreen` exactly.
 class AppColors {
   const AppColors._();
 

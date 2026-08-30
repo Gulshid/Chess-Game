@@ -12,3 +12,9 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# Firebase config — these are tied to a specific Firebase project (yours),
+# so keep them out of version control rather than committing them for
+# every contributor/CI runner to regenerate via `flutterfire configure`.
+google-services.json
+**/google-services.json

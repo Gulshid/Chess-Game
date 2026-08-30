@@ -4,7 +4,11 @@ import 'package:provider/provider.dart';
 
 import '../core/constant/app_colors.dart';
 import '../core/constant/app_constants.dart';
+import '../features/advanced/domain/puzzle_bank.dart';
+import '../features/advanced/presentation/analysis_board_screen.dart';
+import '../features/advanced/presentation/puzzle_screen.dart';
 import '../features/ai/presentation/new_game_dialog.dart';
+import '../features/multiplayer/presentation/matchmaking_screen.dart';
 import '../providers/game_provider.dart';
 import 'game_screen.dart';
 
@@ -74,6 +78,49 @@ class StartScreen extends StatelessWidget {
                   icon: const Icon(Icons.people_outline),
                   label: Text('Local 2-player', style: TextStyle(fontSize: 15.sp)),
                   onPressed: () => _startLocalGame(context),
+                ),
+              ),
+              SizedBox(height: 24.h),
+              const Divider(),
+              SizedBox(height: 12.h),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.tonalIcon(
+                  icon: const Icon(Icons.public),
+                  label: Text('Play online', style: TextStyle(fontSize: 15.sp)),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const MatchmakingScreen()),
+                    );
+                  },
+                ),
+              ),
+              SizedBox(height: 12.h),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.query_stats),
+                  label: Text('Analysis board', style: TextStyle(fontSize: 15.sp)),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const AnalysisBoardScreen()),
+                    );
+                  },
+                ),
+              ),
+              SizedBox(height: 12.h),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.extension_outlined),
+                  label: Text('Daily puzzle', style: TextStyle(fontSize: 15.sp)),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => PuzzleScreen(puzzle: PuzzleBank.daily()),
+                      ),
+                    );
+                  },
                 ),
               ),
             ],

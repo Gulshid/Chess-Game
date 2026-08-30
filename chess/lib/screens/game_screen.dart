@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
+import '../features/advanced/presentation/analysis_board_screen.dart';
+import '../features/advanced/presentation/hint_button.dart';
 import '../features/ai/presentation/new_game_dialog.dart';
 import '../features/board_ui/domain/board_theme.dart';
 import '../features/board_ui/presentation/widgets/captured_pieces_tray.dart';
@@ -57,6 +59,24 @@ class _GameScreenState extends State<GameScreen> {
               child: const Text('New game'),
             ),
           ],
+          content: Padding(
+            padding: EdgeInsets.only(top: 4.h),
+            child: SizedBox(
+              width: double.minPositive,
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.query_stats),
+                label: const Text('Review this game'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => AnalysisBoardScreen(initialMoves: game.moveHistory),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
         ),
       );
     });
@@ -97,6 +117,7 @@ class _GameScreenState extends State<GameScreen> {
           appBar: AppBar(
             title: Text(_appBarTitle(game)),
             actions: [
+              HintButton(game: game),
               IconButton(
                 icon: const Icon(Icons.palette_outlined),
                 tooltip: 'Board theme',

@@ -24,11 +24,18 @@ class PuzzleProvider extends GameProvider {
   final Puzzle puzzle;
 
   int _solvedPlyCount = 0;
-  PuzzleStatus _status = PuzzleStatus.inProgress;
+  PuzzleStatus _puzzleStatus = PuzzleStatus.inProgress;
   Timer? _autoReplyTimer;
 
   int get solvedPlyCount => _solvedPlyCount;
-  PuzzleStatus get status => _status;
+
+  /// Named `puzzleStatus` rather than `status` — [GameProvider] already
+  /// declares a `status` getter returning `GameStatus` (checkmate/
+  /// stalemate/etc. — chess_engine's status). Reusing that name here
+  /// with a different return type (`PuzzleStatus`) would be an invalid
+  /// override, since Dart requires an override's return type to be
+  /// compatible with the member it overrides.
+  PuzzleStatus get puzzleStatus => _puzzleStatus;
 
   /// The side the *player* is solving as — the side to move in the
   /// puzzle's starting FEN.
@@ -38,7 +45,7 @@ class PuzzleProvider extends GameProvider {
     _autoReplyTimer?.cancel();
     loadFen(puzzle.fen);
     _solvedPlyCount = 0;
-    _status = PuzzleStatus.inProgress;
+    _puzzleStatus = PuzzleStatus.inProgress;
     notifyListeners();
   }
 
@@ -46,7 +53,7 @@ class PuzzleProvider extends GameProvider {
     // A puzzle hint just re-selects the correct origin square, the same
     // "let the existing legal-move dots do the pointing" approach
     // `HintButton` uses for live games — no bespoke arrow overlay needed.
-    if (_status != PuzzleStatus.inProgress) return;
+    if (_puzzleStatus != PuzzleStatus.inProgress) return;
     final String? uci = puzzle.nextPlayerMove(_solvedPlyCount);
     if (uci == null) return;
     final Move? move = MoveResolver.fromUci(engine.state, uci);
@@ -55,7 +62,7 @@ class PuzzleProvider extends GameProvider {
 
   @override
   bool moveSelectedTo(int targetSquare, {PieceType promotion = PieceType.queen}) {
-    if (_status != PuzzleStatus.inProgress) return false;
+    if (_puzzleStatus != PuzzleStatus.inProgress) return false;
 
     final List<Move> candidates =
         movesFromSelected.where((Move m) => m.to == targetSquare).toList();
@@ -80,7 +87,7 @@ class PuzzleProvider extends GameProvider {
       // "not quite" — [resetPuzzle] (a "try again" button) lets the
       // player retry from the same starting position.
       clearSelection();
-      _status = PuzzleStatus.failed;
+      _puzzleStatus = PuzzleStatus.failed;
       notifyListeners();
       return false;
     }
@@ -100,7 +107,7 @@ class PuzzleProvider extends GameProvider {
   void _maybePlayForcedReplyOrFinish() {
     final String? replyUci = puzzle.nextPlayerMove(_solvedPlyCount);
     if (replyUci == null) {
-      _status = PuzzleStatus.solved;
+      _puzzleStatus = PuzzleStatus.solved;
       notifyListeners();
       return;
     }
@@ -113,7 +120,7 @@ class PuzzleProvider extends GameProvider {
         _solvedPlyCount++;
       }
       final bool done = puzzle.nextPlayerMove(_solvedPlyCount) == null;
-      if (done) _status = PuzzleStatus.solved;
+      if (done) _puzzleStatus = PuzzleStatus.solved;
       notifyListeners();
     });
   }

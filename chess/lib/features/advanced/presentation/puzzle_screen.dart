@@ -49,7 +49,7 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
       child: AnimatedBuilder(
         animation: _puzzleProvider,
         builder: (context, _) {
-          final PuzzleStatus status = _puzzleProvider.status;
+          final PuzzleStatus status = _puzzleProvider.puzzleStatus;
           final Puzzle puzzle = _puzzleProvider.puzzle;
 
           return Scaffold(

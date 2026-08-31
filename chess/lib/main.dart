@@ -27,7 +27,9 @@ Future<void> main() async {
   ]);
 
   try {
-    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
   } catch (_) {
     // No `firebase_options.dart` / native config present yet — see the
     // note above. Falling through instead of rethrowing keeps every
@@ -43,9 +45,7 @@ class ChessApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => GameProvider()),
-      ],
+      providers: [ChangeNotifierProvider(create: (_) => GameProvider())],
       child: LayoutBuilder(
         builder: (context, constraints) {
           return ScreenUtilInit(
@@ -61,8 +61,9 @@ class ChessApp extends StatelessWidget {
                 themeAnimationCurve: Curves.easeInOut,
                 builder: (context, child) {
                   return MediaQuery(
-                    data: MediaQuery.of(context)
-                        .copyWith(textScaler: TextScaler.noScaling),
+                    data: MediaQuery.of(
+                      context,
+                    ).copyWith(textScaler: TextScaler.noScaling),
                     child: child!,
                   );
                 },
@@ -75,7 +76,6 @@ class ChessApp extends StatelessWidget {
     );
   }
 }
-
 
 Size _getDesignSize(double width) {
   if (width < 600) return const Size(360, 690); // phones

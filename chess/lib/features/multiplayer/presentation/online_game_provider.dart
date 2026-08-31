@@ -38,10 +38,9 @@ class OnlineGameProvider extends GameProvider {
   OnlineGameProvider({
     required MultiplayerRepository repository,
     required String gameId,
-    required String myUid,
+    required this._myUid,
   })  : _repository = repository,
         _gameId = gameId,
-        _myUid = myUid,
         super(engine: ChessEngine.initial()) {
     _subscription = repository.watchGame(gameId).listen(_onRemoteUpdate, onError: (_) {
       _streamStatus = ConnectionStatus.reconnecting;
@@ -220,8 +219,10 @@ class OnlineGameProvider extends GameProvider {
     }
   }
 
+  @override
   Future<void> resign() => _repository.resign(gameId: _gameId);
 
+  @override
   Future<void> offerDraw() => _repository.offerDraw(gameId: _gameId);
 
   Future<void> respondToDrawOffer(bool accept) =>

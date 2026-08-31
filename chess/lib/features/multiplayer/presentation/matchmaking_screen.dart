@@ -237,49 +237,71 @@ class _MatchmakingScreenState extends State<MatchmakingScreen> {
                 SizedBox(height: 12.h),
               ],
               if (_isSearching)
-                Column(
-                  children: [
-                    const CircularProgressIndicator(),
-                    SizedBox(height: 12.h),
-                    const Text('Searching for an opponent…'),
-                    SizedBox(height: 12.h),
-                    OutlinedButton(onPressed: _cancelSearch, child: const Text('Cancel')),
-                  ],
+                // Keyed so Flutter tears this subtree down and builds a
+                // fresh one instead of trying to reconcile it in place
+                // against the very differently-shaped "else" branch below
+                // (which has a focused TextField in it) — swapping
+                // dissimilar subtrees at the same list position without a
+                // key is what triggers the semantics
+                // `!semantics.parentDataDirty` assertion some users hit
+                // here; distinct keys make each branch its own Element so
+                // the framework never tries to diff one against the other.
+                KeyedSubtree(
+                  key: const ValueKey('searching'),
+                  child: Column(
+                    children: [
+                      const CircularProgressIndicator(),
+                      SizedBox(height: 12.h),
+                      const Text('Searching for an opponent…'),
+                      SizedBox(height: 12.h),
+                      OutlinedButton(onPressed: _cancelSearch, child: const Text('Cancel')),
+                    ],
+                  ),
                 )
-              else ...[
-                FilledButton.icon(
-                  icon: const Icon(Icons.bolt),
-                  label: const Text('Quick match'),
-                  onPressed: _quickMatch,
-                ),
-                SizedBox(height: 12.h),
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.link),
-                  label: const Text('Create private game'),
-                  onPressed: _createPrivateGame,
-                ),
-                SizedBox(height: 20.h),
-                const Divider(),
-                SizedBox(height: 12.h),
-                Text('Join a private game', style: TextStyle(fontSize: 13.sp, color: Colors.white70)),
-                SizedBox(height: 8.h),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _codeController,
-                        textCapitalization: TextCapitalization.characters,
-                        decoration: const InputDecoration(
-                          hintText: '6-letter code',
-                          border: OutlineInputBorder(),
-                        ),
+              else
+                KeyedSubtree(
+                  key: const ValueKey('idle'),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      FilledButton.icon(
+                        icon: const Icon(Icons.bolt),
+                        label: const Text('Quick match'),
+                        onPressed: _quickMatch,
                       ),
-                    ),
-                    SizedBox(width: 8.w),
-                    FilledButton(onPressed: _joinPrivateGame, child: const Text('Join')),
-                  ],
+                      SizedBox(height: 12.h),
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.link),
+                        label: const Text('Create private game'),
+                        onPressed: _createPrivateGame,
+                      ),
+                      SizedBox(height: 20.h),
+                      const Divider(),
+                      SizedBox(height: 12.h),
+                      Text(
+                        'Join a private game',
+                        style: TextStyle(fontSize: 13.sp, color: Colors.white70),
+                      ),
+                      SizedBox(height: 8.h),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _codeController,
+                              textCapitalization: TextCapitalization.characters,
+                              decoration: const InputDecoration(
+                                hintText: '6-letter code',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 8.w),
+                          FilledButton(onPressed: _joinPrivateGame, child: const Text('Join')),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ],
             ],
           ),
         ),

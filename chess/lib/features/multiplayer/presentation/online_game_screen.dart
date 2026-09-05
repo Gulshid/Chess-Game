@@ -2,6 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
+import '../../account/data/firestore_saved_games_repository.dart';
+import '../../account/data/hive_cached_saved_games_repository.dart';
+import '../../account/data/saved_games_repository.dart';
+import '../../account/domain/rating.dart';
+import '../../account/domain/saved_game.dart';
+import '../../account/presentation/auth_provider.dart';
+import '../../advanced/domain/pgn.dart';
 import '../../board_ui/domain/board_theme.dart';
 import '../../board_ui/presentation/widgets/captured_pieces_tray.dart';
 import '../../board_ui/presentation/widgets/chess_board.dart';
@@ -38,15 +45,101 @@ class _OnlineGameScreenState extends State<OnlineGameScreen> {
     myUid: widget.repository.currentUid,
   );
 
+  // Phase 9: cloud save + rating update for this device/account — see
+  // `SavedGamesScreen`'s `_LazySavedGamesRepository` for why this is
+  // constructed the same lazy way rather than injected, and
+  // `_recordResultOnce`'s doc for why it's a plain field guarded by a
+  // flag rather than something `OnlineGameProvider` itself calls.
+  final SavedGamesRepository _savedGamesRepository =
+      HiveCachedSavedGamesRepository(cloud: FirestoreSavedGamesRepository());
+  bool _resultRecorded = false;
+
   @override
   void dispose() {
     _provider.dispose();
     super.dispose();
   }
 
+  /// Applies this game's result to the signed-in player's rating
+  /// ([AuthProvider.recordGameResult]) and saves it to their game
+  /// history ([SavedGamesRepository.saveGame]) — exactly once per game,
+  /// guarded by [_resultRecorded] since [_showGameOverDialogIfNeeded]
+  /// (and therefore this) runs on every rebuild while the game stays
+  /// over, not just the first frame that detects it.
+  ///
+  /// Deliberately done here in the screen rather than inside
+  /// [OnlineGameProvider] itself: the provider's job (per its own class
+  /// doc) is mirroring Firestore into local `ChessEngine`/UI state, the
+  /// same responsibility `GameProvider` has for local/AI games. Account
+  /// side-effects are a different concern that both `GameScreen` (for
+  /// local/AI games) and this screen (for online games) apply the same
+  /// way: react to a terminal [OnlineGameStatus] once, from the screen
+  /// that already has both the game and an [AuthProvider] in scope.
+  void _recordResultOnce() {
+    if (_resultRecorded) return;
+    final game = _provider.onlineGame;
+    final PieceColor? myColor = _provider.myColor;
+    if (game == null || myColor == null || !game.status.isOver) return;
+    _resultRecorded = true;
+
+    final MatchResult? result = switch (game.status) {
+      OnlineGameStatus.whiteWon =>
+        myColor == PieceColor.white ? MatchResult.win : MatchResult.loss,
+      OnlineGameStatus.blackWon =>
+        myColor == PieceColor.black ? MatchResult.win : MatchResult.loss,
+      OnlineGameStatus.draw => MatchResult.draw,
+      _ => null, // Aborted (e.g. opponent left pre-game) — no rating impact.
+    };
+
+    final AuthProvider auth = context.read<AuthProvider>();
+    final int opponentRating = myColor == PieceColor.white ? game.blackRating : game.whiteRating;
+    final String opponentName = myColor == PieceColor.white ? game.blackName : game.whiteName;
+
+    if (result != null) {
+      auth.recordGameResult(result: result, opponentRating: opponentRating);
+    }
+
+    final String? uid = auth.user?.uid;
+    if (uid == null) return;
+
+    final String pgnResult = switch (game.status) {
+      OnlineGameStatus.whiteWon => '1-0',
+      OnlineGameStatus.blackWon => '0-1',
+      OnlineGameStatus.draw => '1/2-1/2',
+      _ => '*',
+    };
+    final String pgn = Pgn.generate(
+      sanMoves: game.sanMoveHistory,
+      event: 'Online · ${game.timeControl.label}',
+      white: game.whiteName,
+      black: game.blackName,
+      result: pgnResult,
+    );
+    final SavedGameOutcome outcome = switch (result) {
+      MatchResult.win => SavedGameOutcome.win,
+      MatchResult.loss => SavedGameOutcome.loss,
+      MatchResult.draw => SavedGameOutcome.draw,
+      null => SavedGameOutcome.unknown,
+    };
+    _savedGamesRepository.saveGame(
+      uid,
+      SavedGame(
+        id: game.id,
+        pgn: pgn,
+        source: SavedGameSource.online,
+        outcome: outcome,
+        opponentLabel: 'vs. $opponentName',
+        playerColorWasWhite: myColor == PieceColor.white,
+        moveCount: game.sanMoveHistory.length,
+        playedAtEpochMs: DateTime.now().millisecondsSinceEpoch,
+      ),
+    );
+  }
+
   void _showGameOverDialogIfNeeded() {
     final status = _provider.onlineGame?.status;
     if (status == null || !status.isOver) return;
+    _recordResultOnce();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       showDialog<void>(

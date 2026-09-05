@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../core/constant/app_constants.dart';
+import '../../account/domain/rating.dart';
 import '../domain/online_game.dart';
 import '../domain/online_game_status.dart';
 import '../domain/time_control.dart';
@@ -76,6 +77,7 @@ class FirestoreMultiplayerRepository implements MultiplayerRepository {
   Future<OnlineGame> createPrivateGame({
     required TimeControl timeControl,
     required String displayName,
+    required int rating,
   }) async {
     await ensureSignedIn();
     final String uid = currentUid;
@@ -88,6 +90,7 @@ class FirestoreMultiplayerRepository implements MultiplayerRepository {
       blackUid: null,
       whiteName: displayName,
       blackName: 'Waiting…',
+      whiteRating: rating,
       fen: AppConstants.startingFen,
       uciMoveHistory: const <String>[],
       sanMoveHistory: const <String>[],
@@ -125,6 +128,7 @@ class FirestoreMultiplayerRepository implements MultiplayerRepository {
   Future<OnlineGame> joinPrivateGame({
     required String code,
     required String displayName,
+    required int rating,
   }) async {
     await ensureSignedIn();
     final String uid = currentUid;
@@ -156,12 +160,14 @@ class FirestoreMultiplayerRepository implements MultiplayerRepository {
       game = game.copyWith(
         blackUid: uid,
         blackName: displayName,
+        blackRating: rating,
         status: OnlineGameStatus.active,
         lastMoveAtEpochMs: now,
       );
       transaction.update(ref, <String, Object?>{
         'blackUid': uid,
         'blackName': displayName,
+        'blackRating': rating,
         'status': OnlineGameStatus.active.name,
         'lastMoveAtEpochMs': now,
       });
@@ -173,6 +179,7 @@ class FirestoreMultiplayerRepository implements MultiplayerRepository {
   Future<OnlineGame> findQuickMatch({
     required TimeControl timeControl,
     required String displayName,
+    required int rating,
   }) async {
     await ensureSignedIn();
     final String uid = currentUid;
@@ -197,6 +204,8 @@ class FirestoreMultiplayerRepository implements MultiplayerRepository {
 
           final String opponentUid = fresh.data()!['uid'] as String;
           final String opponentName = fresh.data()!['displayName'] as String? ?? 'Opponent';
+          final int opponentRating =
+              (fresh.data()!['rating'] as num?)?.toInt() ?? Rating.startingRating;
           final int now = DateTime.now().millisecondsSinceEpoch;
 
           final DocumentReference<Map<String, Object?>> gameRef = _games.doc();
@@ -208,6 +217,8 @@ class FirestoreMultiplayerRepository implements MultiplayerRepository {
             blackUid: iAmWhite ? opponentUid : uid,
             whiteName: iAmWhite ? displayName : opponentName,
             blackName: iAmWhite ? opponentName : displayName,
+            whiteRating: iAmWhite ? rating : opponentRating,
+            blackRating: iAmWhite ? opponentRating : rating,
             fen: AppConstants.startingFen,
             uciMoveHistory: const <String>[],
             sanMoveHistory: const <String>[],
@@ -246,6 +257,7 @@ class FirestoreMultiplayerRepository implements MultiplayerRepository {
     await ticketRef.set(<String, Object?>{
       'uid': uid,
       'displayName': displayName,
+      'rating': rating,
       'timeControlLabel': timeControl.label,
       'status': 'waiting',
       'createdAtEpochMs': now,

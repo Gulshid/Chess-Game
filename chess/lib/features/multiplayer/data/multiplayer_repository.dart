@@ -29,28 +29,35 @@ abstract class MultiplayerRepository {
 
   /// Creates a private game other players join via [joinPrivateGame]'s
   /// [code]. Returns the created [OnlineGame] (status
-  /// `waitingForOpponent`).
+  /// `waitingForOpponent`). [rating] is this player's current
+  /// [UserProfile.rating] (Phase 9) — stored on the game document so the
+  /// opponent's post-game rating update (`AuthProvider.recordGameResult`)
+  /// has something to compute against without a second Firestore read;
+  /// pass `Rating.startingRating` for a caller with no profile yet.
   Future<OnlineGame> createPrivateGame({
     required TimeControl timeControl,
     required String displayName,
+    required int rating,
   });
 
   /// Joins a private game by its short shareable code. Throws
   /// [GameNotFoundException] if the code doesn't resolve to a waiting
-  /// game.
+  /// game. See [createPrivateGame] for [rating].
   Future<OnlineGame> joinPrivateGame({
     required String code,
     required String displayName,
+    required int rating,
   });
 
   /// Enters the quick-match queue for [timeControl] and completes once
   /// paired with an opponent (or throws if [cancelQuickMatch] is called
   /// first). See `FirestoreMultiplayerRepository`'s class doc for the
   /// documented limits of doing this without a matchmaking Cloud
-  /// Function.
+  /// Function. See [createPrivateGame] for [rating].
   Future<OnlineGame> findQuickMatch({
     required TimeControl timeControl,
     required String displayName,
+    required int rating,
   });
 
   Future<void> cancelQuickMatch();

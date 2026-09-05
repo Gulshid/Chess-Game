@@ -1,18 +1,18 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /games/{gameId} {
+
+    match /users/{uid} {
+      // Anyone signed in can read any profile (leaderboard, opponent
+      // display in matchmaking) — only the owner can write their own.
       allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null &&
-        (request.auth.uid == resource.data.whiteUid ||
-         request.auth.uid == resource.data.blackUid);
-    }
-    match /game_codes/{code} {
-      allow read, create: if request.auth != null;
-    }
-    match /matchmaking_queue/{ticketId} {
-      allow read, create, update, delete: if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == uid;
+      allow update: if request.auth != null && request.auth.uid == uid;
+      allow delete: if false;
+
+      match /saved_games/{gameId} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
     }
   }
 }

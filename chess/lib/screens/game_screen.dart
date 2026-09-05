@@ -2,6 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
+import '../features/account/data/firestore_saved_games_repository.dart';
+import '../features/account/data/hive_cached_saved_games_repository.dart';
+import '../features/account/data/saved_games_repository.dart';
+import '../features/account/domain/saved_game.dart';
+import '../features/account/presentation/auth_provider.dart';
+import '../features/account/presentation/settings_provider.dart';
+import '../features/advanced/domain/pgn.dart';
 import '../features/advanced/presentation/analysis_board_screen.dart';
 import '../features/advanced/presentation/hint_button.dart';
 import '../features/ai/presentation/new_game_dialog.dart';
@@ -26,18 +33,102 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> {
   bool _flipped = false;
-  BoardTheme _theme = BoardTheme.classicGreen;
+  late BoardTheme _theme;
+
+  // Phase 9: local/AI games are saved to history the same way online
+  // games are (see `OnlineGameScreen._savedGamesRepository`'s doc for
+  // why this is a plain field rather than something `GameProvider`
+  // itself does) — `_gameSaved` guards against saving the same finished
+  // game twice across rebuilds, mirroring `OnlineGameScreen`'s
+  // `_resultRecorded`. Local/AI games don't touch [AuthProvider]'s
+  // rating — see [ProfileRepository.recordGameResult]'s doc for why
+  // that's ranked-online-only.
+  final SavedGamesRepository _savedGamesRepository =
+      HiveCachedSavedGamesRepository(cloud: FirestoreSavedGamesRepository());
+  bool _gameSaved = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Phase 9: start from the player's saved default board theme
+    // instead of always `BoardTheme.classicGreen` — still changeable
+    // per-game via [_pickTheme], which now also persists the choice.
+    _theme = context.read<SettingsProvider>().settings.boardTheme;
+  }
 
   Future<void> _startNewGame() async {
     final game = context.read<GameProvider>();
+    _gameSaved = false;
     final NewGameSelection? selection = await showNewGameDialog(context);
     if (selection == null) return;
     game.startGameVsAi(aiPlaysAs: selection.aiPlaysAs, difficulty: selection.difficulty);
     setState(() => _flipped = selection.aiPlaysAs == PieceColor.white);
   }
 
+  /// Saves the just-finished game to history — see the `_gameSaved`
+  /// field doc above for why this is guarded and scoped to local/AI
+  /// games only.
+  void _saveFinishedGameOnce(GameProvider game) {
+    if (_gameSaved || !game.isGameOver || game.sanHistory.isEmpty) return;
+    _gameSaved = true;
+
+    final String? uid = context.read<AuthProvider>().user?.uid;
+    if (uid == null) return;
+
+    final bool vsAi = game.aiColor != null;
+    // Local 2-player has no single "me" to score a win/loss against —
+    // White's perspective is just the display convention for that case;
+    // for a vs-AI game, "me" is unambiguous (whichever color the AI
+    // isn't playing).
+    final PieceColor perspective =
+        vsAi ? (game.aiColor == PieceColor.white ? PieceColor.black : PieceColor.white) : PieceColor.white;
+
+    final SavedGameOutcome outcome = switch (game.status) {
+      GameStatus.checkmate =>
+        game.sideToMove == perspective ? SavedGameOutcome.loss : SavedGameOutcome.win,
+      GameStatus.stalemate ||
+      GameStatus.drawFiftyMoveRule ||
+      GameStatus.drawInsufficientMaterial ||
+      GameStatus.drawThreefoldRepetition =>
+        SavedGameOutcome.draw,
+      _ => SavedGameOutcome.unknown,
+    };
+    final String pgnResult = switch (game.status) {
+      GameStatus.checkmate => game.sideToMove == PieceColor.white ? '0-1' : '1-0',
+      GameStatus.stalemate ||
+      GameStatus.drawFiftyMoveRule ||
+      GameStatus.drawInsufficientMaterial ||
+      GameStatus.drawThreefoldRepetition =>
+        '1/2-1/2',
+      _ => '*',
+    };
+
+    final String pgn = Pgn.generate(
+      sanMoves: game.sanHistory,
+      event: vsAi ? 'vs. AI (${game.aiDifficulty.label})' : 'Local 2-player',
+      white: vsAi ? (game.aiColor == PieceColor.white ? 'AI' : 'Player') : 'White',
+      black: vsAi ? (game.aiColor == PieceColor.black ? 'AI' : 'Player') : 'Black',
+      result: pgnResult,
+    );
+
+    _savedGamesRepository.saveGame(
+      uid,
+      SavedGame(
+        id: 'local_${DateTime.now().millisecondsSinceEpoch}',
+        pgn: pgn,
+        source: vsAi ? SavedGameSource.ai : SavedGameSource.local,
+        outcome: outcome,
+        opponentLabel: vsAi ? 'vs. AI · ${game.aiDifficulty.label}' : 'Local 2-player',
+        playerColorWasWhite: perspective == PieceColor.white,
+        moveCount: game.sanHistory.length,
+        playedAtEpochMs: DateTime.now().millisecondsSinceEpoch,
+      ),
+    );
+  }
+
   void _showGameOverDialogIfNeeded(GameProvider game) {
     if (!game.isGameOver) return;
+    _saveFinishedGameOnce(game);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       showDialog<void>(
@@ -179,6 +270,7 @@ class _GameScreenState extends State<GameScreen> {
                   trailing: t == _theme ? const Icon(Icons.check) : null,
                   onTap: () {
                     setState(() => _theme = t);
+                    context.read<SettingsProvider>().setBoardTheme(t.name);
                     Navigator.of(context).pop();
                   },
                 ),

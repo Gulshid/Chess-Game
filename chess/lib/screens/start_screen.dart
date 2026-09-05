@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 
 import '../core/constant/app_colors.dart';
 import '../core/constant/app_constants.dart';
+import '../features/account/presentation/auth_provider.dart';
+import '../features/account/presentation/profile_screen.dart';
 import '../features/advanced/domain/puzzle_bank.dart';
 import '../features/advanced/presentation/analysis_board_screen.dart';
 import '../features/advanced/presentation/puzzle_screen.dart';
@@ -42,7 +44,33 @@ class StartScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(AppConstants.appName)),
+      appBar: AppBar(
+        title: Text(AppConstants.appName),
+        actions: [
+          // Phase 9's account entry point. Reads `AuthProvider` (bootstrapped
+          // to a guest session automatically, per that class's doc) so this
+          // is tappable from the very first launch, not gated behind a
+          // sign-in flow — `ProfileScreen` itself offers "create an account"
+          // for a guest who wants to keep their progress.
+          Consumer<AuthProvider>(
+            builder: (context, auth, _) {
+              final String emoji = auth.profile?.avatarEmoji ?? '♟️';
+              return IconButton(
+                tooltip: 'Profile',
+                icon: auth.isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(emoji, style: const TextStyle(fontSize: 20)),
+                onPressed: () => Navigator.of(context)
+                    .push(MaterialPageRoute(builder: (_) => const ProfileScreen())),
+              );
+            },
+          ),
+        ],
+      ),
       body: Center(
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 32.w),

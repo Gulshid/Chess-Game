@@ -1,4 +1,5 @@
 import '../../../core/constant/app_constants.dart';
+import '../../account/domain/rating.dart';
 import 'online_game_status.dart';
 import 'time_control.dart';
 
@@ -20,6 +21,8 @@ class OnlineGame {
     required this.blackUid,
     this.whiteName = 'White',
     this.blackName = 'Black',
+    this.whiteRating = Rating.startingRating,
+    this.blackRating = Rating.startingRating,
     required this.fen,
     required this.uciMoveHistory,
     required this.sanMoveHistory,
@@ -42,6 +45,14 @@ class OnlineGame {
   final String? blackUid;
   final String whiteName;
   final String blackName;
+
+  /// Elo-style rating snapshot for each player at the moment this game
+  /// was created/joined (see `MultiplayerRepository.createPrivateGame`'s
+  /// doc for why it's captured then rather than re-read at game-over) —
+  /// used by `OnlineGameScreen._recordResultOnce` to update
+  /// `AuthProvider.recordGameResult` without a second Firestore read.
+  final int whiteRating;
+  final int blackRating;
 
   final String fen;
   final List<String> uciMoveHistory;
@@ -82,6 +93,8 @@ class OnlineGame {
       blackUid: map['blackUid'] as String?,
       whiteName: map['whiteName'] as String? ?? 'White',
       blackName: map['blackName'] as String? ?? 'Black',
+      whiteRating: (map['whiteRating'] as num?)?.toInt() ?? Rating.startingRating,
+      blackRating: (map['blackRating'] as num?)?.toInt() ?? Rating.startingRating,
       fen: map['fen'] as String? ?? AppConstants.startingFen,
       uciMoveHistory: (map['uciMoveHistory'] as List?)?.cast<String>() ?? const <String>[],
       sanMoveHistory: (map['sanMoveHistory'] as List?)?.cast<String>() ?? const <String>[],
@@ -104,6 +117,8 @@ class OnlineGame {
         'blackUid': blackUid,
         'whiteName': whiteName,
         'blackName': blackName,
+        'whiteRating': whiteRating,
+        'blackRating': blackRating,
         'fen': fen,
         'uciMoveHistory': uciMoveHistory,
         'sanMoveHistory': sanMoveHistory,
@@ -125,6 +140,8 @@ class OnlineGame {
     String? blackUid,
     String? whiteName,
     String? blackName,
+    int? whiteRating,
+    int? blackRating,
     String? fen,
     List<String>? uciMoveHistory,
     List<String>? sanMoveHistory,
@@ -145,6 +162,8 @@ class OnlineGame {
       blackUid: blackUid ?? this.blackUid,
       whiteName: whiteName ?? this.whiteName,
       blackName: blackName ?? this.blackName,
+      whiteRating: whiteRating ?? this.whiteRating,
+      blackRating: blackRating ?? this.blackRating,
       fen: fen ?? this.fen,
       uciMoveHistory: uciMoveHistory ?? this.uciMoveHistory,
       sanMoveHistory: sanMoveHistory ?? this.sanMoveHistory,

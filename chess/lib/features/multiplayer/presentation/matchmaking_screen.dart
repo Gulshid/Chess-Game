@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 
+import '../../account/domain/rating.dart';
+import '../../account/presentation/auth_provider.dart';
+import '../../account/presentation/settings_provider.dart';
 import '../data/firestore_multiplayer_repository.dart';
 import '../data/multiplayer_repository.dart';
 import '../domain/online_game.dart';
@@ -44,17 +48,23 @@ class _LazyFirestoreRepository implements MultiplayerRepository {
   Future<OnlineGame> createPrivateGame({
     required TimeControl timeControl,
     required String displayName,
+    required int rating,
   }) =>
-      _delegate.createPrivateGame(timeControl: timeControl, displayName: displayName);
+      _delegate.createPrivateGame(timeControl: timeControl, displayName: displayName, rating: rating);
   @override
-  Future<OnlineGame> joinPrivateGame({required String code, required String displayName}) =>
-      _delegate.joinPrivateGame(code: code, displayName: displayName);
+  Future<OnlineGame> joinPrivateGame({
+    required String code,
+    required String displayName,
+    required int rating,
+  }) =>
+      _delegate.joinPrivateGame(code: code, displayName: displayName, rating: rating);
   @override
   Future<OnlineGame> findQuickMatch({
     required TimeControl timeControl,
     required String displayName,
+    required int rating,
   }) =>
-      _delegate.findQuickMatch(timeControl: timeControl, displayName: displayName);
+      _delegate.findQuickMatch(timeControl: timeControl, displayName: displayName, rating: rating);
   @override
   Future<void> cancelQuickMatch() => _delegate.cancelQuickMatch();
   @override
@@ -98,10 +108,25 @@ class _LazyFirestoreRepository implements MultiplayerRepository {
 class _MatchmakingScreenState extends State<MatchmakingScreen> {
   final TextEditingController _nameController = TextEditingController(text: 'Player');
   final TextEditingController _codeController = TextEditingController();
-  TimeControl _selectedTimeControl = TimeControl.blitz5;
+  late TimeControl _selectedTimeControl;
 
   bool _isSearching = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    // Phase 9: prefill the display name from the signed-in profile
+    // (rather than the "Player" placeholder every session used to
+    // start with) and default the time control to the player's saved
+    // preference — both editable here as before, this just picks a
+    // better starting point.
+    final String profileName = context.read<AuthProvider>().displayName;
+    if (profileName.isNotEmpty && profileName != 'Player') {
+      _nameController.text = profileName;
+    }
+    _selectedTimeControl = context.read<SettingsProvider>().settings.defaultTimeControl;
+  }
 
   @override
   void dispose() {
@@ -129,6 +154,7 @@ class _MatchmakingScreenState extends State<MatchmakingScreen> {
       final OnlineGame game = await widget.repository.findQuickMatch(
         timeControl: _selectedTimeControl,
         displayName: _nameController.text.trim().isEmpty ? 'Player' : _nameController.text.trim(),
+        rating: context.read<AuthProvider>().profile?.rating ?? Rating.startingRating,
       );
       _openGame(game);
     } catch (e) {
@@ -150,6 +176,7 @@ class _MatchmakingScreenState extends State<MatchmakingScreen> {
       final OnlineGame game = await widget.repository.createPrivateGame(
         timeControl: _selectedTimeControl,
         displayName: _nameController.text.trim().isEmpty ? 'Player' : _nameController.text.trim(),
+        rating: context.read<AuthProvider>().profile?.rating ?? Rating.startingRating,
       );
       if (!mounted) return;
       final String? code = await widget.repository.findCodeForGame(game.id);
@@ -190,6 +217,7 @@ class _MatchmakingScreenState extends State<MatchmakingScreen> {
       final OnlineGame game = await widget.repository.joinPrivateGame(
         code: code,
         displayName: _nameController.text.trim().isEmpty ? 'Player' : _nameController.text.trim(),
+        rating: context.read<AuthProvider>().profile?.rating ?? Rating.startingRating,
       );
       _openGame(game);
     } on GameNotFoundException catch (e) {

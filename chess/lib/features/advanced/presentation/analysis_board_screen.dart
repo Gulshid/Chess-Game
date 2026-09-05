@@ -25,13 +25,21 @@ import 'widgets/eval_bar.dart';
 /// progress on [GameScreen] — pushing this screen never disturbs a
 /// game the player is mid-way through elsewhere.
 class AnalysisBoardScreen extends StatefulWidget {
-  const AnalysisBoardScreen({super.key, this.initialMoves, this.startingFen});
+  const AnalysisBoardScreen({super.key, this.initialMoves, this.startingFen, this.initialPgn});
 
   /// Optionally seed the board with an existing game (e.g. "review this
   /// match" from [GameScreen]'s game-over dialog) rather than starting
   /// from the standard position.
   final List<Move>? initialMoves;
   final String? startingFen;
+
+  /// Alternative seed source to [initialMoves]: full PGN text, used by
+  /// [SavedGamesScreen] (Phase 9) to reopen a game stored as PGN
+  /// without the caller needing to resolve SAN to [Move]s itself first
+  /// — this just delegates to the same [AnalysisProvider.loadPgn] the
+  /// in-screen "Import PGN" dialog already uses. Ignored if
+  /// [initialMoves] is also provided.
+  final String? initialPgn;
 
   @override
   State<AnalysisBoardScreen> createState() => _AnalysisBoardScreenState();
@@ -46,6 +54,13 @@ class _AnalysisBoardScreenState extends State<AnalysisBoardScreen> {
     super.initState();
     if (widget.initialMoves != null && widget.initialMoves!.isNotEmpty) {
       _analysis.loadGame(widget.initialMoves!, startingFen: widget.startingFen);
+    } else if (widget.initialPgn != null && widget.initialPgn!.isNotEmpty) {
+      try {
+        _analysis.loadPgn(widget.initialPgn!);
+      } on FormatException {
+        // Corrupt/unreadable saved PGN — fall back to a blank board
+        // rather than crashing the screen.
+      }
     }
   }
 

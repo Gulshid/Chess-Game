@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
+import '../../account/presentation/auth_provider.dart';
 import '../../board_ui/domain/board_theme.dart';
 import '../../board_ui/presentation/widgets/chess_board.dart';
 import '../../chess_engine/domain/models/piece.dart';
@@ -24,6 +25,23 @@ class PuzzleScreen extends StatefulWidget {
 class _PuzzleScreenState extends State<PuzzleScreen> {
   late PuzzleProvider _puzzleProvider = PuzzleProvider(widget.puzzle);
 
+  // Phase 9: "Puzzle rating system (simplified Elo-style) to track
+  // player improvement" (Phase 8) gets wired up to real persistence
+  // here — `_attemptRecorded` guards recording the same solved/failed
+  // outcome twice across rebuilds (mirroring `OnlineGameScreen`'s
+  // `_resultRecorded`), and is reset whenever the puzzle itself resets
+  // (retry or move to the next one) so a genuinely new attempt counts.
+  bool _attemptRecorded = false;
+
+  void _recordAttemptOnce(PuzzleStatus status) {
+    if (_attemptRecorded || status == PuzzleStatus.inProgress) return;
+    _attemptRecorded = true;
+    context.read<AuthProvider>().recordPuzzleAttempt(
+          solved: status == PuzzleStatus.solved,
+          puzzleRating: _puzzleProvider.puzzle.rating,
+        );
+  }
+
   void _nextPuzzle() {
     final List<Puzzle> all = PuzzleBank.all;
     final int currentIndex = all.indexWhere((p) => p.id == _puzzleProvider.puzzle.id);
@@ -31,6 +49,7 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
     setState(() {
       _puzzleProvider.dispose();
       _puzzleProvider = PuzzleProvider(next);
+      _attemptRecorded = false;
     });
   }
 
@@ -51,6 +70,7 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
         builder: (context, _) {
           final PuzzleStatus status = _puzzleProvider.puzzleStatus;
           final Puzzle puzzle = _puzzleProvider.puzzle;
+          _recordAttemptOnce(status);
 
           return Scaffold(
             appBar: AppBar(
@@ -85,7 +105,10 @@ class _PuzzleScreenState extends State<PuzzleScreen> {
                       children: [
                         Expanded(
                           child: OutlinedButton(
-                            onPressed: _puzzleProvider.resetPuzzle,
+                            onPressed: () {
+                              _puzzleProvider.resetPuzzle();
+                              setState(() => _attemptRecorded = false);
+                            },
                             child: const Text('Try again'),
                           ),
                         ),

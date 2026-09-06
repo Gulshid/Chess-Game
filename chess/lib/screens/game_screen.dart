@@ -43,7 +43,16 @@ class _GameScreenState extends State<GameScreen> {
   // `_resultRecorded`. Local/AI games don't touch [AuthProvider]'s
   // rating — see [ProfileRepository.recordGameResult]'s doc for why
   // that's ranked-online-only.
-  final SavedGamesRepository _savedGamesRepository =
+  //
+  // Lazily constructed rather than a plain field initializer: building
+  // `FirestoreSavedGamesRepository()` touches `FirebaseFirestore.instance`
+  // immediately, which throws if Firebase hasn't finished initializing
+  // yet (or isn't configured at all, e.g. in a widget test that pumps
+  // this screen without a real Firebase app). Deferring construction to
+  // first actual use — i.e. the moment a game genuinely finishes — means
+  // a game that never reaches game-over never touches Firebase at all.
+  SavedGamesRepository? _savedGamesRepositoryInstance;
+  SavedGamesRepository get _savedGamesRepository => _savedGamesRepositoryInstance ??=
       HiveCachedSavedGamesRepository(cloud: FirestoreSavedGamesRepository());
   bool _gameSaved = false;
 

@@ -71,10 +71,32 @@ class BoardTheme {
     coordinateColor: Color(0x99CBD5E0),
   );
 
+  /// Phase 11 accessibility pass: "color-blind friendly themes,
+  /// adjustable piece/board contrast." Square colors use a blue/amber
+  /// palette rather than the red/green pairing that's hardest to tell
+  /// apart under the common forms of color-vision deficiency, and the
+  /// light/dark squares sit much further apart in luminance than any
+  /// other theme here for low-vision users. The check highlight is
+  /// still a red tint for sighted users who expect that convention, but
+  /// [ChessBoard] backs it with a pulsing animation rather than color
+  /// alone (see `_CheckPulseHighlight`), so which square is in check
+  /// doesn't depend on distinguishing that red from anything else.
+  static const BoardTheme highContrast = BoardTheme(
+    name: 'High Contrast',
+    lightSquare: Color(0xFFF5F0E6),
+    darkSquare: Color(0xFF26282B),
+    selectedHighlight: Color(0x990091EA),
+    lastMoveHighlight: Color(0x99FFAB00),
+    checkHighlight: Color(0x99D50000),
+    legalMoveDot: Color(0xCC0091EA),
+    coordinateColor: Color(0xFFFFAB00),
+  );
+
   static const List<BoardTheme> all = <BoardTheme>[
     classicGreen,
     wood,
     marble,
     midnight,
+    highContrast,
   ];
 }

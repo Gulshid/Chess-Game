@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
+import '../core/constant/app_colors.dart';
+
 import '../core/services/game_feedback_service.dart';
 import '../features/account/data/firestore_saved_games_repository.dart';
 import '../features/account/data/hive_cached_saved_games_repository.dart';
@@ -296,7 +298,7 @@ class _GameScreenState extends State<GameScreen> {
 
         return Scaffold(
           appBar: AppBar(
-            title: Text(_appBarTitle(game)),
+            title: game.isAiThinking ? const _ThinkingTitle() : Text(_appBarTitle(game)),
             actions: [
               HintButton(game: game),
               IconButton(
@@ -306,7 +308,15 @@ class _GameScreenState extends State<GameScreen> {
               ),
             ],
           ),
-          body: SafeArea(
+          body: DecoratedBox(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: AppColors.heroGradient,
+              ),
+            ),
+            child: SafeArea(
             child: wide
                 ? Row(
                     children: [
@@ -320,6 +330,7 @@ class _GameScreenState extends State<GameScreen> {
                       Expanded(child: sidePanel),
                     ],
                   ),
+          ),
           ),
           bottomNavigationBar: SafeArea(
             child: Padding(
@@ -392,6 +403,74 @@ class _SidePanel extends StatelessWidget {
           Expanded(child: MoveHistoryPanel()),
         ],
       ),
+    );
+  }
+}
+
+/// Replaces the plain "AI is thinking…" text in the app bar with an
+/// animated three-dot indicator next to the label — a small but
+/// noticeable cue that something is actively happening rather than the
+/// title just being a static string.
+class _ThinkingTitle extends StatefulWidget {
+  const _ThinkingTitle();
+
+  @override
+  State<_ThinkingTitle> createState() => _ThinkingTitleState();
+}
+
+class _ThinkingTitleState extends State<_ThinkingTitle> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text('AI is thinking'),
+        SizedBox(width: 4.w),
+        SizedBox(
+          width: 20,
+          height: 14,
+          child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, _) {
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: List.generate(3, (i) {
+                  final double phase = (_controller.value - i * 0.2) % 1.0;
+                  final double bounce = phase < 0.5 ? phase * 2 : (1 - phase) * 2;
+                  return Transform.translate(
+                    offset: Offset(0, -bounce * 4),
+                    child: Container(
+                      width: 4,
+                      height: 4,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.gold,
+                      ),
+                    ),
+                  );
+                }),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

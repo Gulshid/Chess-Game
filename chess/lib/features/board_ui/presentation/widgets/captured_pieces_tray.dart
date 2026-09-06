@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/constant/app_colors.dart';
 import '../../../../providers/game_provider.dart';
 import '../../../chess_engine/domain/models/piece.dart';
 import 'chess_piece_widget.dart';
@@ -72,30 +73,59 @@ class CapturedPiecesTray extends StatelessWidget {
             chips.add(
               Padding(
                 padding: EdgeInsets.only(right: 1.w),
-                child: ChessPieceWidget(piece: Piece(opponent, type), size: pieceSize.w),
+                // Each captured piece pops in with a slight scale — this
+                // list only grows one entry at a time in practice (one
+                // capture per move), so the widget being freshly created
+                // here is exactly when it should animate in.
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: 1),
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOutBack,
+                  builder: (context, t, child) => Transform.scale(scale: t, child: child),
+                  child: ChessPieceWidget(piece: Piece(opponent, type), size: pieceSize.w),
+                ),
               ),
             );
           }
         }
 
-        return Row(
-          children: [
-            Expanded(
-              child: Wrap(children: chips),
-            ),
-            if (advantage > 0)
-              Padding(
-                padding: EdgeInsets.only(left: 4.w),
-                child: Text(
-                  '+$advantage',
-                  style: TextStyle(
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white70,
+        return Container(
+          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+          decoration: BoxDecoration(
+            color: AppColors.surface.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: chips.isEmpty
+                    ? Text(
+                        'No captures',
+                        style: TextStyle(fontSize: 11.sp, color: Colors.white24),
+                      )
+                    : Wrap(children: chips),
+              ),
+              if (advantage > 0)
+                Padding(
+                  padding: EdgeInsets.only(left: 4.w),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                    decoration: BoxDecoration(
+                      color: AppColors.accent.withOpacity(0.16),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '+$advantage',
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.accent,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         );
       },
     );

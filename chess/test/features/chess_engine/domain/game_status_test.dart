@@ -74,9 +74,13 @@ void main() {
 
     test('threefold repetition is detected when the same position recurs three times', () {
       final engine = ChessEngine.fromFen('7k/8/8/8/8/8/8/K6R w - - 0 1');
-      // Shuffle the rook back and forth three times, returning to the
-      // exact starting position (including side to move) each lap.
-      for (int lap = 0; lap < 3; lap++) {
+      // Two laps (8 plies) of shuffling the rook and king back and
+      // forth already gets the starting position back onto the board
+      // for the 3rd time (occurrences at ply 0, 4, and 8) — a 3rd lap
+      // would try to make more moves on a game the engine already
+      // considers over, which correctly returns no legal moves and
+      // would make `_findMove` throw.
+      for (int lap = 0; lap < 2; lap++) {
         engine.makeMove(_findMove(engine.legalMovesFrom(algebraicToSquare('h1')), 'h2'));
         engine.makeMove(_findMove(engine.legalMovesFrom(algebraicToSquare('h8')), 'g8'));
         engine.makeMove(_findMove(engine.legalMovesFrom(algebraicToSquare('h2')), 'h1'));

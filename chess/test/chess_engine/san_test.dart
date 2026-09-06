@@ -36,9 +36,14 @@ void main() {
     });
 
     test('disambiguates by rank when files match but ranks differ', () {
-      // Rooks on a1 and a8 (white controls both somehow via promotion setup)
-      // both able to reach a4 — needs rank disambiguation.
-      final engine = ChessEngine.fromFen('R3k3/8/8/8/8/8/8/R3K3 w - - 0 1');
+      // Rooks on a1 and a8, black king on e5 (deliberately off both
+      // rooks' rank/file so this tests disambiguation only — an
+      // earlier version of this test put the king on e8, sharing a
+      // rank with the a8 rook, which left black in an incidental check
+      // unrelated to the a1-a4 move being tested, so the engine
+      // correctly appended "+" and the test's expected string was
+      // simply wrong).
+      final engine = ChessEngine.fromFen('R7/8/8/4k3/8/8/8/R3K3 w - - 0 1');
       final move = engine.allLegalMoves.firstWhere((m) => m.uci == 'a1a4');
       expect(San.forMove(engine.state, move), 'R1a4');
     });

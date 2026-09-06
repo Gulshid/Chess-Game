@@ -153,8 +153,22 @@ void main() {
     });
 
     test('dispose cancels the subscription and leaves the game', () {
-      provider.dispose();
-      expect(repo.calls, contains('leaveGame'));
+      // Uses its own local repo/provider rather than the shared ones
+      // from `setUp` — those are already disposed again by this
+      // group's `tearDown`, and disposing a `ChangeNotifier` twice
+      // throws (see `AuthProvider._disposed`'s doc for the same class
+      // of dispose-safety concern this project now guards against).
+      final localRepo = FakeMultiplayerRepository(
+        initialGame: _freshGame(whiteUid: 'me', blackUid: 'opponent'),
+        uid: 'me',
+      );
+      final localProvider =
+          OnlineGameProvider(repository: localRepo, gameId: 'game-1', myUid: 'me');
+
+      localProvider.dispose();
+
+      expect(localRepo.calls, contains('leaveGame'));
+      localRepo.close();
     });
   });
 

@@ -73,17 +73,23 @@ void main() {
     });
 
     test('threefold repetition is detected when the same position recurs three times', () {
-      final engine = ChessEngine.fromFen('7k/8/8/8/8/8/8/K6R w - - 0 1');
-      // Two laps (8 plies) of shuffling the rook and king back and
-      // forth already gets the starting position back onto the board
-      // for the 3rd time (occurrences at ply 0, 4, and 8) — a 3rd lap
-      // would try to make more moves on a game the engine already
-      // considers over, which correctly returns no legal moves and
-      // would make `_findMove` throw.
+      // Rook shuffles e1<->e2, king shuffles h8<->g8 — deliberately not
+      // sharing a file/rank with the rook's resting squares (an earlier
+      // version of this test used h1/h8, which share the h-file: once
+      // the rook came home to h1 it attacked h8 along that file, making
+      // the king's own "return home" move illegal and the test's move
+      // list empty instead of testing repetition at all).
+      final engine = ChessEngine.fromFen('7k/8/8/8/8/8/8/K3R3 w - - 0 1');
+      // Two laps (8 plies) of shuffling back and forth already gets the
+      // starting position back onto the board for the 3rd time
+      // (occurrences at ply 0, 4, and 8) — a 3rd lap would try to make
+      // more moves on a game the engine already considers over, which
+      // correctly returns no legal moves and would make `_findMove`
+      // throw.
       for (int lap = 0; lap < 2; lap++) {
-        engine.makeMove(_findMove(engine.legalMovesFrom(algebraicToSquare('h1')), 'h2'));
+        engine.makeMove(_findMove(engine.legalMovesFrom(algebraicToSquare('e1')), 'e2'));
         engine.makeMove(_findMove(engine.legalMovesFrom(algebraicToSquare('h8')), 'g8'));
-        engine.makeMove(_findMove(engine.legalMovesFrom(algebraicToSquare('h2')), 'h1'));
+        engine.makeMove(_findMove(engine.legalMovesFrom(algebraicToSquare('e2')), 'e1'));
         engine.makeMove(_findMove(engine.legalMovesFrom(algebraicToSquare('g8')), 'h8'));
       }
       expect(engine.status, GameStatus.drawThreefoldRepetition);

@@ -119,14 +119,20 @@ class _AnalysisBoardScreenState extends State<AnalysisBoardScreen> {
           final bool wide = screenSize.width > 720;
 
           // ChessBoard uses LayoutBuilder internally and needs finite
-          // constraints.  When it sits inside a Row(mainAxisSize.min)
-          // the row gives it unbounded width/height, causing the
-          // "BoxConstraints forces an infinite width and height" crash.
-          // Fix: compute the board size up-front from the screen
-          // dimensions and give ChessBoard an explicit SizedBox.
+          // constraints. Compute the board size up-front from screen
+          // dimensions so ChessBoard always gets a concrete SizedBox.
+          //
+          // On mobile the board row is:
+          //   [EvalBar(28.w)] [SizedBox(8.w)] [Padding(8.w) + board + Padding(8.w)]
+          // Total row width = 28.w + 8.w + 8.w + boardSize + 8.w
+          //                 = boardSize + 52.w
+          // So boardSize = screenWidth - 52.w to avoid overflow.
+          final double evalBarWidth = 28.w;
+          final double spacerWidth = 8.w;
+          final double boardPadding = 8.w; // Padding.all on each side
           final double boardSize = wide
               ? screenSize.height * 0.85
-              : screenSize.width - 16.w; // full width minus horizontal padding
+              : screenSize.width - evalBarWidth - spacerWidth - boardPadding * 2;
 
           final Widget board = Row(
             mainAxisSize: MainAxisSize.min,
@@ -137,9 +143,9 @@ class _AnalysisBoardScreenState extends State<AnalysisBoardScreen> {
                 isLoading: _analysis.isEvalLoading,
                 height: boardSize,
               ),
-              SizedBox(width: 8.w),
+              SizedBox(width: spacerWidth),
               Padding(
-                padding: EdgeInsets.all(8.w),
+                padding: EdgeInsets.all(boardPadding),
                 child: SizedBox(
                   width: boardSize,
                   height: boardSize,

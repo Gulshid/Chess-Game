@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/services/game_feedback_service.dart';
 import '../../../../providers/game_provider.dart';
 import '../../../chess_engine/domain/board_utils.dart';
 import '../../../chess_engine/domain/game_status.dart';
@@ -28,6 +29,8 @@ class ChessBoard extends StatefulWidget {
     this.flipped = false,
     this.interactive = true,
     this.showCoordinates = true,
+    this.soundEnabled = true,
+    this.hapticsEnabled = true,
   });
 
   final GameProvider game;
@@ -42,18 +45,40 @@ class ChessBoard extends StatefulWidget {
   final bool interactive;
   final bool showCoordinates;
 
+  /// Phase 11: whether a move/capture/check should play a system sound
+  /// or trigger haptic feedback, respectively. Both default to `true` so
+  /// existing call sites (and widget tests) that don't pass these keep
+  /// working unchanged; [GameScreen] wires these through to the
+  /// player's actual `AppSettings.soundEnabled`/`hapticsEnabled`
+  /// preference. See [GameFeedbackService] for why the board itself
+  /// takes plain booleans rather than reading settings directly.
+  final bool soundEnabled;
+  final bool hapticsEnabled;
+
   @override
   State<ChessBoard> createState() => _ChessBoardState();
 }
 
-class _ChessBoardState extends State<ChessBoard> {
+class _ChessBoardState extends State<ChessBoard> with SingleTickerProviderStateMixin {
   final _PieceTracker _tracker = _PieceTracker();
+
+  /// Drives the check-highlight's pulse (see [_CheckPulseHighlight]).
+  /// Repeats for the lifetime of the board rather than being started/
+  /// stopped per check: while no square is in check, this widget simply
+  /// isn't placed on the board at all, so a free-running controller
+  /// costs nothing extra and is simpler than starting/stopping it in
+  /// sync with game state.
+  late final AnimationController _checkPulseController;
 
   @override
   void initState() {
     super.initState();
     _tracker.resync(widget.game.engine.state);
     widget.game.addListener(_handleGameChanged);
+    _checkPulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 650),
+    )..repeat(reverse: true);
   }
 
   @override
@@ -69,6 +94,7 @@ class _ChessBoardState extends State<ChessBoard> {
   @override
   void dispose() {
     widget.game.removeListener(_handleGameChanged);
+    _checkPulseController.dispose();
     super.dispose();
   }
 
@@ -77,7 +103,9 @@ class _ChessBoardState extends State<ChessBoard> {
     final int newCount = game.moveHistory.length;
 
     if (newCount == _tracker.lastAppliedMoveCount + 1 && game.lastMove != null) {
-      _tracker.applyForward(game.lastMove!, game.engine.state);
+      final Move applied = game.lastMove!;
+      _tracker.applyForward(applied, game.engine.state);
+      _playFeedbackFor(applied, game.status);
     } else if (newCount != _tracker.lastAppliedMoveCount) {
       // Undo, redo-by-more-than-one, reset, or a freshly loaded FEN: not
       // worth reconstructing an animated path for, so snap to the new
@@ -89,6 +117,36 @@ class _ChessBoardState extends State<ChessBoard> {
     }
     _tracker.lastAppliedMoveCount = newCount;
     setState(() {});
+  }
+
+  /// Phase 11 sound/haptics: fires the right [GameFeedbackService] event
+  /// for whatever [move] just happened. Checkmate is deliberately
+  /// excluded from the check-sound branch here — [GameScreen]'s
+  /// game-over dialog fires a distinct, louder game-end cue for that
+  /// case via [GameFeedbackService.playGameEnd], and playing both would
+  /// double up on a single move.
+  void _playFeedbackFor(Move move, GameStatus statusAfterMove) {
+    if (statusAfterMove == GameStatus.check) {
+      GameFeedbackService.playCheck(
+        soundEnabled: widget.soundEnabled,
+        hapticsEnabled: widget.hapticsEnabled,
+      );
+    } else if (move.isCapture) {
+      GameFeedbackService.playCapture(
+        soundEnabled: widget.soundEnabled,
+        hapticsEnabled: widget.hapticsEnabled,
+      );
+    } else if (move.isCastle) {
+      GameFeedbackService.playCastle(
+        soundEnabled: widget.soundEnabled,
+        hapticsEnabled: widget.hapticsEnabled,
+      );
+    } else if (statusAfterMove != GameStatus.checkmate) {
+      GameFeedbackService.playMove(
+        soundEnabled: widget.soundEnabled,
+        hapticsEnabled: widget.hapticsEnabled,
+      );
+    }
   }
 
   Offset _cellForSquare(int square) {
@@ -171,12 +229,20 @@ class _ChessBoardState extends State<ChessBoard> {
           child: Stack(
             children: [
               // --- Square backgrounds + coordinates ---
-              CustomPaint(
-                size: Size(side, side),
-                painter: _BoardPainter(
-                  theme: theme,
-                  flipped: widget.flipped,
-                  showCoordinates: widget.showCoordinates,
+              // Wrapped in its own RepaintBoundary (Phase 11 performance
+              // pass: "Profile and optimize board repaint performance").
+              // This layer only changes on theme/flip/coordinate-toggle,
+              // never on a move, so isolating it means a piece sliding
+              // across the board doesn't force the checkerboard + labels
+              // to repaint every animation frame alongside it.
+              RepaintBoundary(
+                child: CustomPaint(
+                  size: Size(side, side),
+                  painter: _BoardPainter(
+                    theme: theme,
+                    flipped: widget.flipped,
+                    showCoordinates: widget.showCoordinates,
+                  ),
                 ),
               ),
 
@@ -190,13 +256,19 @@ class _ChessBoardState extends State<ChessBoard> {
                     square: square,
                     squareSize: squareSize,
                     child: IgnorePointer(
-                      child: Container(
-                        color: square == checkSquare
-                            ? theme.checkHighlight
-                            : square == game.selectedSquare
-                                ? theme.selectedHighlight
-                                : theme.lastMoveHighlight,
-                      ),
+                      // The king-in-check square pulses (Phase 11: "check
+                      // indication (pulsing red)") instead of sitting at a
+                      // flat tint — see [_CheckPulseHighlight].
+                      child: square == checkSquare
+                          ? _CheckPulseHighlight(
+                              animation: _checkPulseController,
+                              color: theme.checkHighlight,
+                            )
+                          : Container(
+                              color: square == game.selectedSquare
+                                  ? theme.selectedHighlight
+                                  : theme.lastMoveHighlight,
+                            ),
                     ),
                   ),
 
@@ -248,9 +320,24 @@ class _ChessBoardState extends State<ChessBoard> {
                       _commitMove(square, candidates);
                     },
                     builder: (context, candidateData, rejectedData) {
-                      return GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () => _handleSquareTap(square),
+                      // Phase 11 accessibility pass: "screen-reader
+                      // labels." Each square announces its coordinate and
+                      // occupant (e.g. "e4, White pawn" / "e5, empty") so
+                      // a screen-reader user can navigate the board and
+                      // hear what they're about to select or capture —
+                      // information sighted players get for free from
+                      // the rendered piece glyphs and coordinate labels.
+                      return Semantics(
+                        label: _squareSemanticsLabel(
+                          square,
+                          game.engine.state.pieceAt(square),
+                        ),
+                        selected: square == game.selectedSquare,
+                        button: widget.interactive,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => _handleSquareTap(square),
+                        ),
                       );
                     },
                   ),
@@ -266,14 +353,22 @@ class _ChessBoardState extends State<ChessBoard> {
                   top: _cellForSquare(tp.square).dy * squareSize,
                   width: squareSize,
                   height: squareSize,
-                  child: _DraggablePiece(
-                    piece: tp.piece,
-                    square: tp.square,
-                    size: squareSize,
-                    interactive: widget.interactive &&
-                        tp.piece.color == game.sideToMove &&
-                        !game.isGameOver,
-                    onDragStarted: () => widget.game.selectSquare(tp.square),
+                  // Isolates each piece's own paint from every other
+                  // piece and from the highlight/background layers below
+                  // it — part of the same Phase 11 repaint-boundary pass
+                  // as the board background above. A capture or a single
+                  // piece sliding no longer forces all 32 pieces to
+                  // repaint on every frame of that one animation.
+                  child: RepaintBoundary(
+                    child: _DraggablePiece(
+                      piece: tp.piece,
+                      square: tp.square,
+                      size: squareSize,
+                      interactive: widget.interactive &&
+                          tp.piece.color == game.sideToMove &&
+                          !game.isGameOver,
+                      onDragStarted: () => widget.game.selectSquare(tp.square),
+                    ),
                   ),
                 ),
             ],
@@ -305,6 +400,23 @@ class _ChessBoardState extends State<ChessBoard> {
       if (p != null && p.color == mover && p.type == PieceType.king) return s;
     }
     return null;
+  }
+
+  /// Builds the screen-reader announcement for [square] — see the
+  /// `Semantics` call site above for why this exists.
+  String _squareSemanticsLabel(int square, Piece? occupant) {
+    final String coordinate = squareToAlgebraic(square);
+    if (occupant == null) return '$coordinate, empty';
+    final String colorName = occupant.color == PieceColor.white ? 'White' : 'Black';
+    final String typeName = switch (occupant.type) {
+      PieceType.pawn => 'pawn',
+      PieceType.knight => 'knight',
+      PieceType.bishop => 'bishop',
+      PieceType.rook => 'rook',
+      PieceType.queen => 'queen',
+      PieceType.king => 'king',
+    };
+    return '$coordinate, $colorName $typeName';
   }
 }
 
@@ -344,6 +456,34 @@ class _DraggablePiece extends StatelessWidget {
       ),
       childWhenDragging: const SizedBox.shrink(),
       child: visual,
+    );
+  }
+}
+
+/// The king-in-check square's highlight pulses rather than sitting at a
+/// flat opacity — "check indication (pulsing red)" per the roadmap's
+/// Phase 11 polish list, and one more cue (alongside the sound/haptic
+/// hit from [GameFeedbackService.playCheck]) that doesn't rely on a
+/// player being able to distinguish this red tint by color alone.
+///
+/// Built as an [AnimatedWidget] driven by [_ChessBoardState]'s own
+/// repeating [AnimationController] rather than an implicit animation:
+/// implicit animations (e.g. `TweenAnimationBuilder`) run once per value
+/// change and don't loop on their own, and this needs to pulse for as
+/// long as the check highlight is on screen.
+class _CheckPulseHighlight extends AnimatedWidget {
+  const _CheckPulseHighlight({required Animation<double> animation, required this.color})
+      : super(listenable: animation);
+
+  final Color color;
+
+  Animation<double> get _animation => listenable as Animation<double>;
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: 0.55 + 0.45 * _animation.value,
+      child: Container(color: color),
     );
   }
 }

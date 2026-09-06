@@ -1,6 +1,7 @@
+import 'package:chess/features/account/data/auth_repository.dart';
 import 'package:chess/features/account/domain/rating.dart';
 import 'package:chess/features/account/presentation/auth_provider.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../support/fake_auth_repository.dart';

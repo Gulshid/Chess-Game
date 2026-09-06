@@ -8,7 +8,8 @@
 import 'package:chess/features/chess_engine/domain/chess_engine.dart';
 import 'package:chess/features/chess_engine/domain/game_status.dart';
 import 'package:chess/features/chess_engine/domain/models/move.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
+
 
 void main() {
   group('Pins', () {

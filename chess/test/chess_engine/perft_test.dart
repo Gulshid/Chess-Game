@@ -12,7 +12,8 @@
 import 'package:chess/features/chess_engine/domain/fen.dart';
 import 'package:chess/features/chess_engine/domain/models/board_state.dart';
 import 'package:chess/features/chess_engine/domain/move_generator.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
+
 
 /// Counts leaf nodes at [depth] from [state]. Operates directly on
 /// [BoardState] (not [ChessEngine]) since perft is a raw tree search with

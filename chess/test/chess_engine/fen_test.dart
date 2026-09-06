@@ -4,7 +4,8 @@ import 'package:chess/features/chess_engine/domain/fen.dart';
 import 'package:chess/features/chess_engine/domain/game_status.dart';
 import 'package:chess/features/chess_engine/domain/models/board_state.dart';
 import 'package:chess/features/chess_engine/domain/models/move.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
+
 
 void main() {
   group('FEN', () {

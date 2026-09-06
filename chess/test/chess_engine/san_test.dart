@@ -2,7 +2,8 @@ import 'package:chess/features/chess_engine/domain/chess_engine.dart';
 import 'package:chess/features/chess_engine/domain/models/board_state.dart';
 import 'package:chess/features/chess_engine/domain/models/move.dart';
 import 'package:chess/features/chess_engine/domain/san.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
+
 
 void main() {
   group('San.forMove', () {

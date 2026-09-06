@@ -26,9 +26,8 @@ import 'saved_games_repository.dart';
 /// implemented here, the same honest-gap treatment
 /// `FirestoreMultiplayerRepository` gives its own known limits.
 class HiveCachedSavedGamesRepository implements SavedGamesRepository {
-  HiveCachedSavedGamesRepository({required SavedGamesRepository cloud, Box<String>? box})
-      : _cloud = cloud,
-        _box = box;
+  HiveCachedSavedGamesRepository({required this._cloud, Box<String>? box})
+      : _box = box;
 
   final SavedGamesRepository _cloud;
   Box<String>? _box;

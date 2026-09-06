@@ -49,7 +49,7 @@ class LeaderboardScreen extends StatelessWidget {
             return ListView.separated(
               padding: EdgeInsets.symmetric(vertical: 8.h),
               itemCount: players.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
+              separatorBuilder: (_, _) => const Divider(height: 1),
               itemBuilder: (context, index) {
                 final UserProfile p = players[index];
                 final bool isMe = p.uid == myUid;

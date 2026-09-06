@@ -13,7 +13,7 @@ import 'settings_repository.dart';
 /// landed on Hive rather than Drift here) would be pure overhead for
 /// one JSON object.
 class HiveSettingsRepository implements SettingsRepository {
-  HiveSettingsRepository({Box<String>? box}) : _box = box;
+  HiveSettingsRepository({this._box});
 
   Box<String>? _box;
 

@@ -21,21 +21,13 @@ Future<void> main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Local key/value store for Phase 9's device-only data: app settings
-  // (`HiveSettingsRepository`) and the offline saved-games cache
-  // (`HiveCachedSavedGamesRepository`). Safe to initialize unconditionally
-  // — unlike Firebase below, this has no remote config to fail against.
   await Hive.initFlutter();
 
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-  } catch (_) {
-    // No `firebase_options.dart` / native config present yet — see the
-    // note above. Falling through instead of rethrowing keeps every
-    // non-multiplayer feature usable out of the box.
-  }
+  } catch (_) {}
 
   runApp(const ChessApp());
 }
@@ -48,14 +40,6 @@ class ChessApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => GameProvider()),
-        // Registered at the app root (rather than per-screen, like the
-        // rest of this app's providers) because both outlive any single
-        // game or screen: the signed-in identity and app preferences
-        // need to be available from `StartScreen` onward, and every
-        // screen that reads or writes them (matchmaking's display-name
-        // field, the game-over save/rating hooks, the settings screen
-        // itself) expects one shared instance rather than a fresh one
-        // per navigation.
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
       ],

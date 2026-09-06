@@ -50,7 +50,17 @@ class _OnlineGameScreenState extends State<OnlineGameScreen> {
   // constructed the same lazy way rather than injected, and
   // `_recordResultOnce`'s doc for why it's a plain field guarded by a
   // flag rather than something `OnlineGameProvider` itself calls.
-  final SavedGamesRepository _savedGamesRepository =
+  //
+  // Lazily constructed (getter + cached instance, not a plain field
+  // initializer) for the same reason `GameScreen._savedGamesRepository`
+  // is: building `FirestoreSavedGamesRepository()` touches
+  // `FirebaseFirestore.instance` immediately, which throws without a
+  // real Firebase app present (e.g. this screen pumped in a widget test
+  // with a fake `MultiplayerRepository`). Deferring construction until
+  // a game genuinely ends means a test that never reaches game-over
+  // never touches Firebase.
+  SavedGamesRepository? _savedGamesRepositoryInstance;
+  SavedGamesRepository get _savedGamesRepository => _savedGamesRepositoryInstance ??=
       HiveCachedSavedGamesRepository(cloud: FirestoreSavedGamesRepository());
   bool _resultRecorded = false;
 

@@ -43,6 +43,7 @@ class OnlineGameProvider extends GameProvider {
         _gameId = gameId,
         super(engine: ChessEngine.initial()) {
     _subscription = repository.watchGame(gameId).listen(_onRemoteUpdate, onError: (_) {
+      if (_disposed) return;
       _streamStatus = ConnectionStatus.reconnecting;
       notifyListeners();
     });
@@ -59,6 +60,16 @@ class OnlineGameProvider extends GameProvider {
   late final StreamSubscription<OnlineGame> _subscription;
   late final Timer _heartbeatTimer;
   late final Timer _clockTicker;
+
+  /// Guards [_onRemoteUpdate] and [_tickClocks] against running after
+  /// [dispose] — the game stream (a real Firestore `snapshots()` stream
+  /// in production, an async broadcast stream in `FakeMultiplayerRepository`
+  /// for tests) can have an update already in flight the moment this
+  /// screen/provider is disposed (e.g. the player navigates away right as
+  /// the opponent's move arrives), which would otherwise call
+  /// [notifyListeners] on an already-disposed [ChangeNotifier] — see
+  /// `AuthProvider._disposed`'s doc for the identical race this mirrors.
+  bool _disposed = false;
 
   OnlineGame? _onlineGame;
   ConnectionStatus _streamStatus = ConnectionStatus.connected;
@@ -121,6 +132,7 @@ class OnlineGameProvider extends GameProvider {
   }
 
   void _onRemoteUpdate(OnlineGame game) {
+    if (_disposed) return;
     final OnlineGame? previous = _onlineGame;
     _onlineGame = game;
     _streamStatus = ConnectionStatus.connected;
@@ -153,6 +165,7 @@ class OnlineGameProvider extends GameProvider {
   }
 
   void _tickClocks() {
+    if (_disposed) return;
     final OnlineGame? game = _onlineGame;
     if (game == null || game.status != OnlineGameStatus.active) return;
 
@@ -230,6 +243,7 @@ class OnlineGameProvider extends GameProvider {
 
   @override
   void dispose() {
+    _disposed = true;
     _subscription.cancel();
     _heartbeatTimer.cancel();
     _clockTicker.cancel();

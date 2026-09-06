@@ -42,6 +42,25 @@ class AuthProvider extends ChangeNotifier {
   bool _isLoading = true;
   String? _error;
 
+  /// Guards every async callback below (`_onAuthChanged`'s body, and the
+  /// nested `watchProfile` listener specifically) against touching state
+  /// or calling [notifyListeners] after [dispose] has already run.
+  ///
+  /// Real bug this was fixed for: `_profiles.watchProfile(...)` (a
+  /// broadcast stream — see [FirestoreProfileRepository]/
+  /// `FakeProfileRepository`) delivers its first snapshot *asynchronously*,
+  /// never synchronously during `.listen()`. If the widget/test holding
+  /// this provider disposes it in the gap between subscribing and that
+  /// first snapshot arriving — entirely possible in production (navigate
+  /// away right after signing in) and reliably reproducible in tests
+  /// that dispose immediately after an `await` — the listener callback
+  /// still fires and would call [notifyListeners] on an already-disposed
+  /// [ChangeNotifier], which throws. Flutter's own
+  /// `ChangeNotifier.dispose()` deliberately asserts against exactly
+  /// this ("used after being disposed") rather than failing silently, so
+  /// the fix belongs here, not in a try/catch around the assertion.
+  bool _disposed = false;
+
   AppUser? get user => _user;
   UserProfile? get profile => _profile;
   bool get isLoading => _isLoading;
@@ -61,6 +80,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       await _auth.signInAnonymously();
     } catch (e) {
+      if (_disposed) return;
       _error = 'Could not start a session: ${_friendlyError(e)}';
       _isLoading = false;
       notifyListeners();
@@ -70,6 +90,7 @@ class AuthProvider extends ChangeNotifier {
   Future<void> _onAuthChanged(AppUser? user) async {
     _user = user;
     await _profileSub?.cancel();
+    if (_disposed) return;
 
     if (user == null) {
       _profile = null;
@@ -91,10 +112,13 @@ class AuthProvider extends ChangeNotifier {
         UserProfile.newPlayer(uid: user.uid, displayName: seedName, isAnonymous: user.isAnonymous),
       );
     } catch (e) {
+      if (_disposed) return;
       _error = 'Could not load your profile: ${_friendlyError(e)}';
     }
+    if (_disposed) return;
 
     _profileSub = _profiles.watchProfile(user.uid).listen((p) {
+      if (_disposed) return;
       _profile = p;
       _isLoading = false;
       notifyListeners();
@@ -167,10 +191,12 @@ class AuthProvider extends ChangeNotifier {
     _error = null;
     try {
       await action();
+      if (_disposed) return true;
       notifyListeners();
       return true;
     } catch (e) {
       _error = _friendlyError(e);
+      if (_disposed) return false;
       notifyListeners();
       return false;
     }
@@ -194,6 +220,7 @@ class AuthProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     _authSub?.cancel();
     _profileSub?.cancel();
     super.dispose();

@@ -12,7 +12,7 @@ import 'core/theme/app_theme.dart';
 import 'features/account/presentation/auth_provider.dart';
 import 'features/account/presentation/settings_provider.dart';
 import 'providers/game_provider.dart';
-import 'screens/start_screen.dart';
+import 'screens/splash_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -64,7 +64,7 @@ class ChessApp extends StatelessWidget {
                     child: child!,
                   );
                 },
-                home: const StartScreen(),
+                home: const SplashScreen(),
               );
             },
           );

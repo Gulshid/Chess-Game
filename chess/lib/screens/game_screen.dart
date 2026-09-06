@@ -261,13 +261,34 @@ class _GameScreenState extends State<GameScreen> {
 
         final Widget board = Padding(
           padding: EdgeInsets.all(12.w),
-          child: ChessBoard(
-            game: game,
-            theme: _theme,
-            flipped: _flipped,
-            interactive: !game.isAiThinking && !game.isGameOver,
-            soundEnabled: settings.soundEnabled,
-            hapticsEnabled: settings.hapticsEnabled,
+          // A soft "floating card" frame around the board — rounded
+          // corners + shadow — instead of the board sitting flush
+          // against the scaffold background, so it reads as the
+          // centerpiece of the screen rather than a flat grid.
+          child: Container(
+            padding: EdgeInsets.all(8.w),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              color: Theme.of(context).colorScheme.surface,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.35),
+                  blurRadius: 24,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: ChessBoard(
+                game: game,
+                theme: _theme,
+                flipped: _flipped,
+                interactive: !game.isAiThinking && !game.isGameOver,
+                soundEnabled: settings.soundEnabled,
+                hapticsEnabled: settings.hapticsEnabled,
+              ),
+            ),
           ),
         );
 

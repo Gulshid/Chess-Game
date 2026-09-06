@@ -70,6 +70,14 @@ class _ChessBoardState extends State<ChessBoard> with SingleTickerProviderStateM
   /// sync with game state.
   late final AnimationController _checkPulseController;
 
+  /// Captured pieces mid fade-out-and-shrink, keyed by a fresh id per
+  /// capture so two captures in quick succession (rare, but possible via
+  /// fast undo/redo) each get their own timer rather than one clobbering
+  /// the other. Purely decorative — [_PieceTracker] has already dropped
+  /// these from the live board by the time they land here.
+  final Map<int, _CaptureGhost> _captureGhosts = <int, _CaptureGhost>{};
+  int _nextGhostId = 0;
+
   @override
   void initState() {
     super.initState();
@@ -104,6 +112,15 @@ class _ChessBoardState extends State<ChessBoard> with SingleTickerProviderStateM
 
     if (newCount == _tracker.lastAppliedMoveCount + 1 && game.lastMove != null) {
       final Move applied = game.lastMove!;
+      if (applied.isCapture) {
+        final int capturedSquare = applied.flag == MoveFlag.enPassant
+            ? squareAt(fileOf(applied.to), rankOf(applied.from))
+            : applied.to;
+        final Piece? capturedPiece = _tracker.pieceAt(capturedSquare);
+        if (capturedPiece != null) {
+          _spawnCaptureGhost(capturedSquare, capturedPiece);
+        }
+      }
       _tracker.applyForward(applied, game.engine.state);
       _playFeedbackFor(applied, game.status);
     } else if (newCount != _tracker.lastAppliedMoveCount) {
@@ -147,6 +164,19 @@ class _ChessBoardState extends State<ChessBoard> with SingleTickerProviderStateM
         hapticsEnabled: widget.hapticsEnabled,
       );
     }
+  }
+
+  /// Puts a fading, shrinking "ghost" of a just-captured piece on
+  /// [square] for a quarter second — a small but noticeable cue that a
+  /// piece was *taken* rather than just having vanished, on top of the
+  /// existing capture sound/haptic from [_playFeedbackFor].
+  void _spawnCaptureGhost(int square, Piece piece) {
+    final int id = _nextGhostId++;
+    _captureGhosts[id] = _CaptureGhost(square: square, piece: piece);
+    Future.delayed(const Duration(milliseconds: 280), () {
+      if (!mounted) return;
+      setState(() => _captureGhosts.remove(id));
+    });
   }
 
   Offset _cellForSquare(int square) {
@@ -279,21 +309,33 @@ class _ChessBoardState extends State<ChessBoard> with SingleTickerProviderStateM
                   squareSize: squareSize,
                   child: IgnorePointer(
                     child: Center(
-                      child: Container(
-                        width: game.engine.state.pieceAt(target) == null
-                            ? squareSize * 0.3
-                            : squareSize * 0.86,
-                        height: game.engine.state.pieceAt(target) == null
-                            ? squareSize * 0.3
-                            : squareSize * 0.86,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: game.engine.state.pieceAt(target) == null
-                              ? theme.legalMoveDot
-                              : Colors.transparent,
-                          border: game.engine.state.pieceAt(target) == null
-                              ? null
-                              : Border.all(color: theme.legalMoveDot, width: 3),
+                      // Pops in with a slight overshoot rather than
+                      // appearing instantly — this widget only exists
+                      // for the lifetime of the current selection, so
+                      // the animation naturally replays each time a
+                      // piece is selected.
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0, end: 1),
+                        duration: const Duration(milliseconds: 160),
+                        curve: Curves.easeOutBack,
+                        builder: (context, t, child) =>
+                            Transform.scale(scale: t.clamp(0, 1.15), child: child),
+                        child: Container(
+                          width: game.engine.state.pieceAt(target) == null
+                              ? squareSize * 0.3
+                              : squareSize * 0.86,
+                          height: game.engine.state.pieceAt(target) == null
+                              ? squareSize * 0.3
+                              : squareSize * 0.86,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: game.engine.state.pieceAt(target) == null
+                                ? theme.legalMoveDot
+                                : Colors.transparent,
+                            border: game.engine.state.pieceAt(target) == null
+                                ? null
+                                : Border.all(color: theme.legalMoveDot, width: 3),
+                          ),
                         ),
                       ),
                     ),
@@ -368,6 +410,26 @@ class _ChessBoardState extends State<ChessBoard> with SingleTickerProviderStateM
                           tp.piece.color == game.sideToMove &&
                           !game.isGameOver,
                       onDragStarted: () => widget.game.selectSquare(tp.square),
+                    ),
+                  ),
+                ),
+
+              // --- Capture ghosts (fading, on top of everything) ---
+              for (final MapEntry<int, _CaptureGhost> entry in _captureGhosts.entries)
+                _positionedSquare(
+                  square: entry.value.square,
+                  squareSize: squareSize,
+                  child: IgnorePointer(
+                    child: TweenAnimationBuilder<double>(
+                      key: ValueKey<int>(entry.key),
+                      tween: Tween(begin: 0, end: 1),
+                      duration: const Duration(milliseconds: 280),
+                      curve: Curves.easeOut,
+                      builder: (context, t, child) => Opacity(
+                        opacity: 1 - t,
+                        child: Transform.scale(scale: 1 + 0.35 * t, child: child),
+                      ),
+                      child: ChessPieceWidget(piece: entry.value.piece, size: squareSize),
                     ),
                   ),
                 ),
@@ -451,7 +513,7 @@ class _DraggablePiece extends StatelessWidget {
         child: SizedBox(
           width: size * 1.15,
           height: size * 1.15,
-          child: ChessPieceWidget(piece: piece, size: size * 1.15),
+          child: ChessPieceWidget(piece: piece, size: size * 1.15, elevated: true),
         ),
       ),
       childWhenDragging: const SizedBox.shrink(),
@@ -585,6 +647,15 @@ class _PieceTracker {
 
   List<_TrackedPiece> get pieces => _byId.values.toList(growable: false);
 
+  /// The piece currently tracked on [square], or null if empty — read
+  /// *before* [applyForward] mutates the tracker, so callers can see
+  /// what's about to be captured.
+  Piece? pieceAt(int square) {
+    final int? id = _squareToId[square];
+    if (id == null) return null;
+    return _byId[id]?.piece;
+  }
+
   void resync(BoardState state) {
     _byId.clear();
     _squareToId.clear();
@@ -640,4 +711,13 @@ class _TrackedPiece {
   final int id;
   int square;
   Piece piece;
+}
+
+/// A just-captured piece mid fade-out, rendered by [_ChessBoardState]
+/// for a quarter second on top of the normal piece layer. See
+/// [_ChessBoardState._spawnCaptureGhost].
+class _CaptureGhost {
+  const _CaptureGhost({required this.square, required this.piece});
+  final int square;
+  final Piece piece;
 }

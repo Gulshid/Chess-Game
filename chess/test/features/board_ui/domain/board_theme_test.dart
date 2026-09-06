@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:chess/features/board_ui/domain/board_theme.dart';
 import 'package:flutter_test/flutter_test.dart';
 

@@ -115,7 +115,18 @@ class _AnalysisBoardScreenState extends State<AnalysisBoardScreen> {
       child: AnimatedBuilder(
         animation: _analysis,
         builder: (context, _) {
-          final bool wide = MediaQuery.of(context).size.width > 720;
+          final Size screenSize = MediaQuery.of(context).size;
+          final bool wide = screenSize.width > 720;
+
+          // ChessBoard uses LayoutBuilder internally and needs finite
+          // constraints.  When it sits inside a Row(mainAxisSize.min)
+          // the row gives it unbounded width/height, causing the
+          // "BoxConstraints forces an infinite width and height" crash.
+          // Fix: compute the board size up-front from the screen
+          // dimensions and give ChessBoard an explicit SizedBox.
+          final double boardSize = wide
+              ? screenSize.height * 0.85
+              : screenSize.width - 16.w; // full width minus horizontal padding
 
           final Widget board = Row(
             mainAxisSize: MainAxisSize.min,
@@ -124,15 +135,20 @@ class _AnalysisBoardScreenState extends State<AnalysisBoardScreen> {
               EvalBar(
                 centipawns: _analysis.evalCentipawns,
                 isLoading: _analysis.isEvalLoading,
+                height: boardSize,
               ),
               SizedBox(width: 8.w),
               Padding(
                 padding: EdgeInsets.all(8.w),
-                child: ChessBoard(
-                  game: _analysis,
-                  theme: BoardTheme.classicGreen,
-                  flipped: _flipped,
-                  interactive: true,
+                child: SizedBox(
+                  width: boardSize,
+                  height: boardSize,
+                  child: ChessBoard(
+                    game: _analysis,
+                    theme: BoardTheme.classicGreen,
+                    flipped: _flipped,
+                    interactive: true,
+                  ),
                 ),
               ),
             ],

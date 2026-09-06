@@ -193,7 +193,7 @@ class _ConfettiPainter extends CustomPainter {
       final double opacity = (1 - progress).clamp(0.0, 1.0);
       if (opacity <= 0) continue;
 
-      paint.color = Color.lerp(accent, Colors.white, p.hueShift)!.withOpacity(opacity * 0.85);
+      paint.color = Color.lerp(accent, Colors.white, p.hueShift)!.withValues(alpha: opacity * 0.85);
 
       canvas.save();
       canvas.translate(dx, dy);

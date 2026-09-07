@@ -37,8 +37,9 @@ service cloud.firestore {
 
     // 6-letter invite codes -> gameId lookup for private games.
     match /game_codes/{code} {
-      allow get: if request.auth != null;
-      allow list: if false; // never enumerate all codes
+      // list is needed for findCodeForGame()'s where('gameId', ...) query
+      // right after creating a private game.
+      allow read: if request.auth != null;
       allow create: if request.auth != null;
       allow update, delete: if false;
     }

@@ -107,7 +107,7 @@ class _StartScreenState extends State<StartScreen> with SingleTickerProviderStat
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : CircleAvatar(
-                          backgroundColor: Colors.white.withOpacity(0.08),
+                          backgroundColor: Colors.white.withValues(alpha: 0.08),
                           child: Text(emoji, style: const TextStyle(fontSize: 18)),
                         ),
                   onPressed: () => Navigator.of(context)
@@ -258,7 +258,7 @@ class _HeroBadge extends StatelessWidget {
           colors: AppColors.goldGradient,
         ),
         boxShadow: [
-          BoxShadow(color: AppColors.gold.withOpacity(0.35), blurRadius: 20, spreadRadius: 1),
+          BoxShadow(color: AppColors.gold.withValues(alpha: 0.35), blurRadius: 20, spreadRadius: 1),
         ],
       ),
       child: Icon(Icons.grid_4x4_rounded, size: 34, color: AppColors.scaffoldBackground),
@@ -310,12 +310,12 @@ class _MenuCardState extends State<_MenuCard> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
             color: widget.filled
-                ? AppColors.seed.withOpacity(0.16)
-                : AppColors.surface.withOpacity(0.7),
+                ? AppColors.seed.withValues(alpha: 0.16)
+                : AppColors.surface.withValues(alpha: 0.7),
             border: Border.all(
               color: widget.filled
-                  ? AppColors.seed.withOpacity(0.5)
-                  : Colors.white.withOpacity(0.08),
+                  ? AppColors.seed.withValues(alpha: 0.5)
+                  : Colors.white.withValues(alpha: 0.08),
             ),
           ),
           child: Row(
@@ -325,7 +325,7 @@ class _MenuCardState extends State<_MenuCard> {
                 height: 44,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: widget.accent.withOpacity(0.16),
+                  color: widget.accent.withValues(alpha: 0.16),
                 ),
                 child: Icon(widget.icon, color: widget.accent, size: 22),
               ),
@@ -345,12 +345,12 @@ class _MenuCardState extends State<_MenuCard> {
                     const SizedBox(height: 2),
                     Text(
                       widget.subtitle,
-                      style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 12),
+                      style: TextStyle(color: Colors.white.withValues(alpha: 0.55), fontSize: 12),
                     ),
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right_rounded, color: Colors.white.withOpacity(0.35)),
+              Icon(Icons.chevron_right_rounded, color: Colors.white.withValues(alpha: 0.35)),
             ],
           ),
         ),

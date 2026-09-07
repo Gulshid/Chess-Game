@@ -113,14 +113,14 @@ class ChessPieceWidget extends StatelessWidget {
             boxShadow: elevated
                 ? [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.45),
+                      color: Colors.black.withValues(alpha: 0.45),
                       blurRadius: size * 0.22,
                       offset: Offset(0, size * 0.10),
                     ),
                   ]
                 : [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.28),
+                      color: Colors.black.withValues(alpha: 0.28),
                       blurRadius: size * 0.06,
                       offset: Offset(0, size * 0.03),
                     ),

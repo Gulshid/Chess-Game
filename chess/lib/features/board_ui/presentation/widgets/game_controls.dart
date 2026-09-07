@@ -36,7 +36,7 @@ class GameControls extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withOpacity(0.06)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -135,7 +135,7 @@ class _ControlButtonState extends State<_ControlButton> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: widget.enabled && (widget.accentTint || widget.dangerTint)
-                    ? tint.withOpacity(0.14)
+                    ? tint.withValues(alpha: 0.14)
                     : Colors.transparent,
               ),
               child: Icon(widget.icon, color: color, size: 22),

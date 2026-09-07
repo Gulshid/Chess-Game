@@ -75,7 +75,7 @@ class _MoveHistoryPanelState extends State<MoveHistoryPanel> {
                 blackIdx == sans.length - 1 && game.lastMove != null;
 
             return Container(
-              color: rowIndex.isEven ? Colors.white.withOpacity(0.02) : Colors.transparent,
+              color: rowIndex.isEven ? Colors.white.withValues(alpha: 0.02) : Colors.transparent,
               padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
               child: Row(
                 children: [
@@ -119,7 +119,7 @@ class _SanCell extends StatelessWidget {
       duration: const Duration(milliseconds: 200),
       padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
       decoration: BoxDecoration(
-        color: highlighted ? AppColors.gold.withOpacity(0.18) : Colors.transparent,
+        color: highlighted ? AppColors.gold.withValues(alpha: 0.18) : Colors.transparent,
         borderRadius: BorderRadius.circular(6.r),
       ),
       child: Text(

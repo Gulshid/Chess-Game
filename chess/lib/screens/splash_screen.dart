@@ -175,7 +175,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                         style: TextStyle(
                           fontSize: 14,
                           letterSpacing: 0.4,
-                          color: Colors.white.withOpacity(0.6),
+                          color: Colors.white.withValues(alpha: 0.6),
                         ),
                       ),
                     ),
@@ -196,7 +196,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                         borderRadius: BorderRadius.circular(4),
                         child: LinearProgressIndicator(
                           value: _controller.value,
-                          backgroundColor: Colors.white.withOpacity(0.08),
+                          backgroundColor: Colors.white.withValues(alpha: 0.08),
                           valueColor: const AlwaysStoppedAnimation(AppColors.gold),
                         ),
                       ),
@@ -233,7 +233,7 @@ class _CrownMark extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.gold.withOpacity(0.45),
+            color: AppColors.gold.withValues(alpha: 0.45),
             blurRadius: 36,
             spreadRadius: 2,
           ),
@@ -303,9 +303,9 @@ class _SweepPainter extends CustomPainter {
     final Paint paint = Paint()
       ..shader = LinearGradient(
         colors: [
-          Colors.white.withOpacity(0.0),
-          Colors.white.withOpacity(0.05),
-          Colors.white.withOpacity(0.0),
+          Colors.white.withValues(alpha: 0.0),
+          Colors.white.withValues(alpha: 0.05),
+          Colors.white.withValues(alpha: 0.0),
         ],
       ).createShader(Rect.fromLTWH(x, 0, bandWidth, size.height));
 

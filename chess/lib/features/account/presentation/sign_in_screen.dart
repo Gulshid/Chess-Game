@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/constant/app_colors.dart';
 import 'auth_provider.dart';
 
 enum _Mode { signIn, signUp }
@@ -84,89 +85,147 @@ class _SignInScreenState extends State<SignInScreen> {
   Widget build(BuildContext context) {
     final bool signingUp = _mode == _Mode.signUp;
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(title: Text(signingUp ? 'Create account' : 'Sign in')),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(24.w),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (signingUp && _isUpgradingGuest) ...[
-                  Container(
-                    padding: EdgeInsets.all(12.w),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      'This keeps your current rating and game history — you\'re just adding a '
-                      'password so you can sign back in on another device.',
-                      style: TextStyle(fontSize: 12.sp),
+      body: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: AppColors.heroGradient,
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(24.w, 8.h, 24.w, 24.h),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(height: 8.h),
+                  Center(
+                    child: Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: AppColors.goldGradient,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.gold.withValues(alpha: 0.35),
+                            blurRadius: 18,
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        signingUp ? Icons.person_add_alt_1_rounded : Icons.lock_outline_rounded,
+                        color: AppColors.scaffoldBackground,
+                        size: 30,
+                      ),
                     ),
                   ),
-                  SizedBox(height: 16.h),
-                ],
-                if (signingUp) ...[
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Display name',
-                      border: OutlineInputBorder(),
+                  SizedBox(height: 28.h),
+                  if (signingUp && _isUpgradingGuest) ...[
+                    Container(
+                      padding: EdgeInsets.all(14.w),
+                      decoration: BoxDecoration(
+                        color: AppColors.accent.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.shield_moon_rounded, color: AppColors.accent, size: 18),
+                          SizedBox(width: 8.w),
+                          Expanded(
+                            child: Text(
+                              'This keeps your current rating and game history — you\'re just '
+                              'adding a password so you can sign back in on another device.',
+                              style: TextStyle(fontSize: 12.sp, color: Colors.white70),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
+                    SizedBox(height: 16.h),
+                  ],
+                  if (signingUp) ...[
+                    TextFormField(
+                      controller: _nameController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        labelText: 'Display name',
+                        prefixIcon: Icon(Icons.badge_outlined),
+                      ),
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
+                    ),
+                    SizedBox(height: 14.h),
+                  ],
+                  TextFormField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'Email',
+                      prefixIcon: Icon(Icons.alternate_email_rounded),
+                    ),
+                    validator: (v) =>
+                        (v == null || !v.contains('@')) ? 'Enter a valid email' : null,
+                  ),
+                  SizedBox(height: 14.h),
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      prefixIcon: const Icon(Icons.lock_outline_rounded),
+                      suffixIcon: IconButton(
+                        icon: Icon(_obscurePassword
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined),
+                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                      ),
+                    ),
+                    validator: (v) => (v == null || v.length < 6) ? 'At least 6 characters' : null,
+                  ),
+                  if (!signingUp)
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: _forgotPassword,
+                        child: const Text('Forgot password?'),
+                      ),
+                    ),
+                  SizedBox(height: 20.h),
+                  FilledButton(
+                    onPressed: _isSubmitting ? null : _submit,
+                    child: _isSubmitting
+                        ? SizedBox(
+                            height: 18.h,
+                            width: 18.h,
+                            child: const CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(signingUp ? 'Create account' : 'Sign in'),
                   ),
                   SizedBox(height: 12.h),
+                  TextButton(
+                    onPressed: () => setState(() => _mode = signingUp ? _Mode.signIn : _Mode.signUp),
+                    child: Text(signingUp
+                        ? 'Already have an account? Sign in'
+                        : 'New here? Create an account'),
+                  ),
                 ],
-                TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder()),
-                  validator: (v) =>
-                      (v == null || !v.contains('@')) ? 'Enter a valid email' : null,
-                ),
-                SizedBox(height: 12.h),
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    border: const OutlineInputBorder(),
-                    suffixIcon: IconButton(
-                      icon: Icon(_obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                    ),
-                  ),
-                  validator: (v) => (v == null || v.length < 6) ? 'At least 6 characters' : null,
-                ),
-                if (!signingUp)
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: _forgotPassword,
-                      child: const Text('Forgot password?'),
-                    ),
-                  ),
-                SizedBox(height: 20.h),
-                FilledButton(
-                  onPressed: _isSubmitting ? null : _submit,
-                  child: _isSubmitting
-                      ? SizedBox(
-                          height: 18.h,
-                          width: 18.h,
-                          child: const CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(signingUp ? 'Create account' : 'Sign in'),
-                ),
-                SizedBox(height: 12.h),
-                TextButton(
-                  onPressed: () => setState(() => _mode = signingUp ? _Mode.signIn : _Mode.signUp),
-                  child: Text(signingUp
-                      ? 'Already have an account? Sign in'
-                      : 'New here? Create an account'),
-                ),
-              ],
+              ),
             ),
           ),
         ),

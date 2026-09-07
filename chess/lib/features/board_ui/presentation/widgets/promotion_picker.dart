@@ -96,10 +96,10 @@ class _PromotionChoiceState extends State<_PromotionChoice> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             color: _hovered
-                ? AppColors.gold.withOpacity(0.16)
-                : Colors.white.withOpacity(0.05),
+                ? AppColors.gold.withValues(alpha: 0.16)
+                : Colors.white.withValues(alpha: 0.05),
             border: Border.all(
-              color: _hovered ? AppColors.gold : Colors.white.withOpacity(0.08),
+              color: _hovered ? AppColors.gold : Colors.white.withValues(alpha: 0.08),
               width: _hovered ? 2 : 1,
             ),
           ),

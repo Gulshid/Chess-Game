@@ -92,7 +92,7 @@ class CapturedPiecesTray extends StatelessWidget {
         return Container(
           padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
           decoration: BoxDecoration(
-            color: AppColors.surface.withOpacity(0.5),
+            color: AppColors.surface.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
@@ -111,7 +111,7 @@ class CapturedPiecesTray extends StatelessWidget {
                   child: Container(
                     padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
                     decoration: BoxDecoration(
-                      color: AppColors.accent.withOpacity(0.16),
+                      color: AppColors.accent.withValues(alpha: 0.16),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(

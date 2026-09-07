@@ -18,9 +18,8 @@ class AppColors {
   static const Color surfaceElevated = Color(0xFF1B2340);
 
   /// Seed color used to derive the whole Material 3 color scheme.
-  /// A richer violet-blue than the old flat purple, tuned to sit well
-  /// against the gold accent.
-  static const Color seed = Color(0xFF6C63FF);
+  /// A rich emerald green, tuned to sit well against the gold accent.
+  static const Color seed = Color(0xFF10B981);
 
   /// Warm gold — the app's signature accent. Used sparingly (primary CTA,
   /// splash mark, highlights) so it stays special rather than everywhere.
@@ -47,7 +46,7 @@ class AppColors {
   // that hasn't migrated to `BoardTheme` yet.
   static const Color boardLightSquare = Color(0xFFEEEED2);
   static const Color boardDarkSquare = Color(0xFF769656);
-  static const Color boardHighlight = Color(0x806C63FF);
+  static const Color boardHighlight = Color(0x8010B981);
   static const Color boardLastMove = Color(0x80F6F669);
   static const Color boardCheck = Color(0x80EF5350);
 }
